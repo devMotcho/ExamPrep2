@@ -1,5 +1,6 @@
 using Auth.Infrastructure.Identity;
 using Auth.Infrastructure.Persistence;
+using Auth.Infrastructure.Repositories;
 using Auth.Infrastructure.Security;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.Identity;
@@ -28,6 +29,12 @@ builder.Services.AddIdentity<User, IdentityRole>(opt =>
 .AddSignInManager<SignInManager<User>>()     // make use of sign in manager in order to sign in user
 .AddUserManager<UserManager<User>>()         // make use of user manager in order to create user
 .AddDefaultTokenProviders();                 // to be able to create tokens for email confirmation
+
+
+builder.Services.AddScoped<IUserRepository, UserRepository>();
+builder.Services.AddScoped<IRefreshTokenRepository, RefreshTokenRepository>();
+builder.Services.AddScoped<IOutboxRepository, OutboxRepository>();
+builder.Services.AddScoped<IUnitOfWork, UnitOfWork>();
 
 // Jwt Bearer Configuration with Assymetric keys
 var jwtSettings = builder.Configuration.GetSection("Jwt");

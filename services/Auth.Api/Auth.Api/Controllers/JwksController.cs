@@ -8,12 +8,10 @@ namespace Auth.Api.Controllers;
 [Route(".well-known")]
 public class JwksController(RsaKeyProvider keys) : ControllerBase
 {
-    private readonly RsaKeyProvider _keys = keys;
-
     [HttpGet("jwks.json")]
     public IActionResult Get()
     {
-        var key = new RsaSecurityKey(_keys.PublicKey) { KeyId = _keys.KeyId };
+        var key = new RsaSecurityKey(keys.PublicKey) { KeyId = keys.KeyId };
         var jwk = JsonWebKeyConverter.ConvertFromRSASecurityKey(key);
         jwk.Use = "sig";
         jwk.Alg = SecurityAlgorithms.RsaSha256;

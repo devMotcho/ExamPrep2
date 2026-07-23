@@ -1,7 +1,6 @@
 using System.IdentityModel.Tokens.Jwt;
 using System.Security.Claims;
 using System.Security.Cryptography;
-using System.Text;
 using Auth.Infrastructure.Identity;
 using Microsoft.Extensions.Configuration;
 using Microsoft.IdentityModel.Tokens;
@@ -36,15 +35,11 @@ public class JwtTokenService(RsaKeyProvider keys, IConfiguration config) : IToke
         return new JwtSecurityTokenHandler().WriteToken(token);
     }
 
-    public string GenerateRefreshToken()
+    public (string RawToken, string TokenHash) GenerateRefreshToken()
     {
         var bytes = RandomNumberGenerator.GetBytes(64);
-        return Convert.ToBase64String(bytes);
-    }
-
-    public string HashToken(string token)
-    {
-        var bytes = SHA256.HashData(Encoding.UTF8.GetBytes(token));
-        return Convert.ToBase64String(bytes);
+        var rawToken = Convert.ToBase64String(bytes);
+        var tokenHash = Convert.ToBase64String(SHA256.HashData(bytes));
+        return (rawToken, tokenHash);
     }
 }

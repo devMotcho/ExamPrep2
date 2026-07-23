@@ -1,6 +1,7 @@
 namespace Auth.Infrastructure.Persistence;
 
 using Auth.Infrastructure.Identity;
+using Auth.Infrastructure.Outbox;
 using Microsoft.AspNetCore.Identity.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore;
 
@@ -8,6 +9,7 @@ public class AuthDbContext(DbContextOptions<AuthDbContext> options)
             : IdentityDbContext<User>(options) 
 {
     public DbSet<RefreshToken> RefreshTokens => Set<RefreshToken>();
+    public DbSet<OutboxMessage> OutboxMessages => Set<OutboxMessage>();
     protected override void OnConfiguring(DbContextOptionsBuilder optionsBuilder)
     {
         base.OnConfiguring(optionsBuilder);
