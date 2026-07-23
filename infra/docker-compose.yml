@@ -1,0 +1,40 @@
+services:
+  postgres:
+    image: postgres:16
+    container_name: examprep-postgres
+    environment:
+      POSTGRES_USER: app
+      POSTGRES_PASSWORD: app
+      POSTGRES_DB: authdb
+    ports:
+      - "5432:5432"
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U app -d authdb"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  auth-api:
+    build:
+      context: ../services/Auth.Api
+      dockerfile: Auth.Api/Dockerfile
+    container_name: auth-api
+    ports:
+      - "5001:8080"
+    environment:
+      ASPNETCORE_URLS: "http://+:8080"
+      ConnectionStrings__AuthDb: "Host=postgres;Port=5432;Database=authdb;Username=app;Password=app"
+      Jwt__Issuer: "examprep-auth"
+      Jwt__Audience: "examprep"
+      Jwt__PrivateKeyPath: "/keys/private.pem"
+      Jwt__PublicKeyPath: "/keys/public.pem"
+    volumes:
+      - ../keys/jwt:/keys:ro
+    depends_on:
+      postgres:
+        condition: service_healthy
+
+volumes:
+  pgdata:
