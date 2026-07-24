@@ -1,4 +1,4 @@
-using Auth.Infrastructure.Outbox;
+using Auth.Infrastructure.Persistence.Outbox;
 
 namespace Auth.Infrastructure.Repositories;
 

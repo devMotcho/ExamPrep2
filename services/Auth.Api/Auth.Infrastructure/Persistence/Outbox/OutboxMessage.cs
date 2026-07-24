@@ -1,4 +1,4 @@
-namespace Auth.Infrastructure.Outbox;
+namespace Auth.Infrastructure.Persistence.Outbox;
 
 public class OutboxMessage
 {

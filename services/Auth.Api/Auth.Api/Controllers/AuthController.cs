@@ -1,15 +1,15 @@
-namespace Auth.Api.Controllers;
 
 using System.Text.Json;
 using Auth.Api.Contracts;
 using Auth.Infrastructure.Identity;
 using Auth.Infrastructure.Messaging;
-using Auth.Infrastructure.Outbox;
 using Auth.Infrastructure.Persistence;
+using Auth.Infrastructure.Persistence.Outbox;
 using Auth.Infrastructure.Repositories;
 using Auth.Infrastructure.Security;
 using Microsoft.AspNetCore.Mvc;
 
+namespace Auth.Api.Controllers;
 [ApiController]
 [Route("api/auth")]
 public class AuthController(
@@ -56,7 +56,7 @@ public class AuthController(
         {
             Topic = "user-registered",
             Key = user.Id,
-            Payload = JsonSerializer.Serialize(new UserRegisteredEvent(user.Id, user.Email!, DateTime.UtcNow))
+            Payload = JsonSerializer.Serialize(new UserRegisteredEvent(user.Id, user.Email, DateTime.UtcNow))
         });
 
         await unitOfWork.SaveChangesAsync();

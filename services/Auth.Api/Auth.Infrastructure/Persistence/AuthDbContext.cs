@@ -1,10 +1,9 @@
-namespace Auth.Infrastructure.Persistence;
-
 using Auth.Infrastructure.Identity;
-using Auth.Infrastructure.Outbox;
+using Auth.Infrastructure.Persistence.Outbox;
 using Microsoft.AspNetCore.Identity.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore;
 
+namespace Auth.Infrastructure.Persistence;
 public class AuthDbContext(DbContextOptions<AuthDbContext> options) 
             : IdentityDbContext<User>(options) 
 {
