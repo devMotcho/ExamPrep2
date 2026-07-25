@@ -3,11 +3,11 @@
 
 ``` text
 Auth.Domain/
-├── Entities/          (User, RefreshToken)
 ├── ValueObjects/       (Email, HashedPassword, etc. if you want them)
 └── Rules/              (token expiry rules, password policy — plain logic, no dependencies)
 
 Auth.Infrastructure/
+├── Entities/          (User, RefreshToken -> since project uses microsoft identity package)
 ├── Persistence/
 │   ├── AuthDbContext.cs
 │   ├── Migrations/

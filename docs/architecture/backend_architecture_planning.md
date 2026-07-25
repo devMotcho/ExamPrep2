@@ -48,8 +48,8 @@ examprep/
 │   ├── Auth.Api/
 │   │   ├── Auth.Api.sln
 │   │   ├── Auth.Api/                  (host project: Program, config, DI wiring)
-│   │   ├── Auth.Domain/               (entities, value objects, domain rules)
-│   │   ├── Auth.Infrastructure/       (EF Core, Kafka consumer for payment-completed)
+│   │   ├── Auth.Domain/               (value objects, domain rules)
+│   │   ├── Auth.Infrastructure/       (EF Core, entities, Kafka consumer for payment-completed)
 │   │   └── Auth.Api.Tests/
 │   ├── Payments.Api/
 │   │   ├── Payments.Api.sln
