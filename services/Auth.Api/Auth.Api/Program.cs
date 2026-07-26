@@ -36,10 +36,10 @@ builder.Services.AddScoped<IRefreshTokenRepository, RefreshTokenRepository>();
 builder.Services.AddScoped<IOutboxRepository, OutboxRepository>();
 builder.Services.AddScoped<IUnitOfWork, UnitOfWork>();
 
-// Jwt Bearer Configuration with Assymetric keys
-var jwtSettings = builder.Configuration.GetSection("Jwt");
-var rsaKeyProvider = new RsaKeyProvider(builder.Configuration); // temp instance just to build validation params
-builder.Services.AddSingleton(rsaKeyProvider);
+// Jwt Bearer Configuration with Asymmetric keys
+// RsaKeyProvider is registered as a singleton so it is only resolved after
+// WebApplicationFactory.ConfigureWebHost has injected the test configuration.
+builder.Services.AddSingleton<RsaKeyProvider>();
 builder.Services.AddScoped<ITokenService, JwtTokenService>();
 
 builder.Services.AddAuthentication(opt =>
@@ -47,20 +47,28 @@ builder.Services.AddAuthentication(opt =>
     opt.DefaultAuthenticateScheme = JwtBearerDefaults.AuthenticationScheme;
     opt.DefaultChallengeScheme = JwtBearerDefaults.AuthenticationScheme;
 })
-.AddJwtBearer(opt =>
-{
-    opt.TokenValidationParameters = new TokenValidationParameters
+.AddJwtBearer();
+
+// Wire up the RSA public key and JWT settings via PostConfigure so that the
+// IConfiguration/RsaKeyProvider instances available here are already populated
+// with any overrides from WebApplicationFactory.ConfigureWebHost.
+builder.Services
+    .AddOptions<JwtBearerOptions>(JwtBearerDefaults.AuthenticationScheme)
+    .PostConfigure<RsaKeyProvider, IConfiguration>((options, keys, cfg) =>
     {
-        ValidateIssuer = true,
-        ValidateAudience = true,
-        ValidateLifetime = true,
-        ValidateIssuerSigningKey = true,
-        ValidIssuer = jwtSettings["Issuer"],
-        ValidAudience = jwtSettings["Audience"],
-        IssuerSigningKey = new RsaSecurityKey(rsaKeyProvider.PublicKey),
-        ClockSkew = TimeSpan.Zero
-    };
-});
+        options.TokenValidationParameters = new TokenValidationParameters
+        {
+            ValidateIssuer = true,
+            ValidateAudience = true,
+            ValidateLifetime = true,
+            ValidateIssuerSigningKey = true,
+            ValidIssuer = cfg["Jwt:Issuer"],
+            ValidAudience = cfg["Jwt:Audience"],
+            IssuerSigningKey = new RsaSecurityKey(keys.PublicKey),
+            ClockSkew = TimeSpan.Zero
+        };
+    });
+
 
 builder.Services.AddAuthorization();
 builder.Services.AddControllers();
@@ -89,3 +97,6 @@ app.UseAuthorization();
 app.MapControllers();
 
 app.Run();
+
+// Expose Program to the test project so WebApplicationFactory<Program> compiles.
+public partial class Program { }

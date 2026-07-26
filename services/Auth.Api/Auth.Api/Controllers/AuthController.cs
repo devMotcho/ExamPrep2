@@ -56,7 +56,7 @@ public class AuthController(
         {
             Topic = "user-registered",
             Key = user.Id,
-            Payload = JsonSerializer.Serialize(new UserRegisteredEvent(user.Id, user.Email, DateTime.UtcNow))
+            Payload = JsonSerializer.Serialize(new UserRegisteredEvent(user.Id, user.Email, user.CreatedAt))
         });
 
         await unitOfWork.SaveChangesAsync();
