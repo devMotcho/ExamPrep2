@@ -43,4 +43,36 @@ public class AuthService(
         var accessToken = tokens.GenerateAccessToken(user);
         return RegisterResult.Success(accessToken, rawRefreshToken);
     }
+
+    public async Task<RefreshResult> RefreshAsync(string rawRefreshToken)
+    {
+        var tokenHash = tokens.HashRefreshToken(rawRefreshToken);
+        if (tokenHash is null)
+            return RefreshResult.TokenNotFound(); // invalid Base64 — not a real token
+        var stored = await refreshTokens.FindByHashAsync(tokenHash);
+
+        if (stored is null)
+            return RefreshResult.TokenNotFound();
+
+        if (stored.IsRevoked || stored.ExpiresAt <= DateTime.UtcNow)
+            return RefreshResult.TokenExpiredOrRevoked();
+
+        var user = await users.FindByIdAsync(stored.UserId);
+        if (user is null)
+            return RefreshResult.TokenNotFound();
+
+        await using var transaction = await unitOfWork.BeginTransactionAsync();
+
+        // Token rotation: revoke the consumed token before issuing a new one
+        await refreshTokens.RevokeAsync(stored.Id);
+
+        var (newRawToken, newTokenHash) = tokens.GenerateRefreshToken();
+        await refreshTokens.AddAsync(user.Id, newTokenHash, DateTime.UtcNow.AddDays(30));
+
+        await unitOfWork.SaveChangesAsync();
+        await transaction.CommitAsync();
+
+        var accessToken = tokens.GenerateAccessToken(user);
+        return RefreshResult.Success(accessToken, newRawToken);
+    }
 }

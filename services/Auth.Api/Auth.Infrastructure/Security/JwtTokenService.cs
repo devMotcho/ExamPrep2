@@ -40,4 +40,17 @@ public class JwtTokenService(RsaKeyProvider keys, IConfiguration config) : IToke
         var tokenHash = Convert.ToBase64String(SHA256.HashData(bytes));
         return (rawToken, tokenHash);
     }
+
+    public string? HashRefreshToken(string rawToken)
+    {
+        try
+        {
+            var bytes = Convert.FromBase64String(rawToken);
+            return Convert.ToBase64String(SHA256.HashData(bytes));
+        }
+        catch (FormatException)
+        {
+            return null; // not valid Base64 — treat as token-not-found
+        }
+    }
 }

@@ -23,6 +23,12 @@ public class UserRepository(UserManager<User> userManager) : IUserRepository
             : CreateUserResult.Failure(result.Errors.Select(e => e.Description));
     }
 
+    public async Task<AppUser?> FindByIdAsync(string userId)
+    {
+        var user = await userManager.FindByIdAsync(userId);
+        return user is null ? null : Map(user);
+    }
+
     public async Task<bool> CheckPasswordAsync(string userId, string password)
     {
         var user = await userManager.FindByIdAsync(userId);
