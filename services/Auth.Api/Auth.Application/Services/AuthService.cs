@@ -75,4 +75,26 @@ public class AuthService(
         var accessToken = tokens.GenerateAccessToken(user);
         return RefreshResult.Success(accessToken, newRawToken);
     }
+
+    public async Task<LoginResult> LoginAsync(string emailOrUsername, string password)
+    {
+        var user = await users.FindByEmailOrUsernameAsync(emailOrUsername);
+        if (user is null)
+            return LoginResult.InvalidCredentials();
+
+        var passwordValid = await users.CheckPasswordAsync(user.Id, password);
+        if (!passwordValid)
+            return LoginResult.InvalidCredentials();
+
+        await using var transaction = await unitOfWork.BeginTransactionAsync();
+
+        var (rawRefreshToken, refreshTokenHash) = tokens.GenerateRefreshToken();
+        await refreshTokens.AddAsync(user.Id, refreshTokenHash, DateTime.UtcNow.AddDays(30));
+
+        await unitOfWork.SaveChangesAsync();
+        await transaction.CommitAsync();
+
+        var accessToken = tokens.GenerateAccessToken(user);
+        return LoginResult.Success(accessToken, rawRefreshToken);
+    }
 }

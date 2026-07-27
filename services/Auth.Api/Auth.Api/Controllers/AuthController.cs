@@ -56,6 +56,25 @@ public class AuthController(IAuthService authService) : ControllerBase
         }
     }
 
+    [HttpPost("login")]
+    public async Task<IActionResult> Login(LoginRequest req)
+    {
+        var result = await authService.LoginAsync(req.EmailOrUsername, req.Password);
+
+        switch (result.Status)
+        {
+            case LoginStatus.InvalidCredentials:
+                return Unauthorized(new { message = "Invalid email/username or password." });
+
+            case LoginStatus.Success:
+                SetRefreshCookie(result.RawRefreshToken!);
+                return Ok(new AuthResponse(result.AccessToken!));
+
+            default:
+                throw new InvalidOperationException($"Unhandled login status: {result.Status}");
+        }
+    }
+
     private void SetRefreshCookie(string rawToken) =>
         Response.Cookies.Append("refresh_token", rawToken, new CookieOptions
         {
