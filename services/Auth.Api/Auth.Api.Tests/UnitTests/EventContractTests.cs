@@ -1,5 +1,5 @@
 using System.Text.Json;
-using Auth.Infrastructure.Messaging;
+using Auth.Application.Events;
 
 namespace Auth.Api.Tests.UnitTests;
 

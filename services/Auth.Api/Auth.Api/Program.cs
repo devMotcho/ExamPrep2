@@ -1,76 +1,14 @@
-using Auth.Application.Services;
-using Auth.Infrastructure.Identity;
+using Auth.Api.Extensions;
 using Auth.Infrastructure.Persistence;
-using Auth.Infrastructure.Repositories;
-using Auth.Infrastructure.Security;
-using Microsoft.AspNetCore.Authentication.JwtBearer;
-using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
-using Microsoft.IdentityModel.Tokens;
 
 var builder = WebApplication.CreateBuilder(args);
 
-
-// Connection with Postgres auth instance
-builder.Services.AddDbContext<AuthDbContext>(opt =>
-    opt.UseNpgsql(builder.Configuration.GetConnectionString("AuthDb")));
-
-// Identity User Configuration
-builder.Services.AddIdentity<User, IdentityRole>(opt =>
-{
-    opt.Password.RequiredLength = 8;
-    opt.Password.RequireNonAlphanumeric = true;
-    opt.Lockout.MaxFailedAccessAttempts = 5;
-    opt.Lockout.DefaultLockoutTimeSpan = TimeSpan.FromMinutes(15);
-    opt.User.RequireUniqueEmail = true;
-})
-.AddRoles<IdentityRole>()                    // be able to add roles
-.AddRoleManager<RoleManager<IdentityRole>>() // be able to make use of RoleManager (creating... roles)
-.AddEntityFrameworkStores<AuthDbContext>()    // providing our context to the identity system
-.AddSignInManager<SignInManager<User>>()     // make use of sign in manager in order to sign in user
-.AddUserManager<UserManager<User>>()         // make use of user manager in order to create user
-.AddDefaultTokenProviders();                 // to be able to create tokens for email confirmation
-
-
-builder.Services.AddScoped<IUserRepository, UserRepository>();
-builder.Services.AddScoped<IRefreshTokenRepository, RefreshTokenRepository>();
-builder.Services.AddScoped<IOutboxRepository, OutboxRepository>();
-builder.Services.AddScoped<IUnitOfWork, UnitOfWork>();
-builder.Services.AddScoped<IAuthService, AuthService>();
-
-// Jwt Bearer Configuration with Asymmetric keys
-// RsaKeyProvider is registered as a singleton so it is only resolved after
-// WebApplicationFactory.ConfigureWebHost has injected the test configuration.
-builder.Services.AddSingleton<RsaKeyProvider>();
-builder.Services.AddScoped<ITokenService, JwtTokenService>();
-
-builder.Services.AddAuthentication(opt =>
-{
-    opt.DefaultAuthenticateScheme = JwtBearerDefaults.AuthenticationScheme;
-    opt.DefaultChallengeScheme = JwtBearerDefaults.AuthenticationScheme;
-})
-.AddJwtBearer();
-
-// Wire up the RSA public key and JWT settings via PostConfigure so that the
-// IConfiguration/RsaKeyProvider instances available here are already populated
-// with any overrides from WebApplicationFactory.ConfigureWebHost.
 builder.Services
-    .AddOptions<JwtBearerOptions>(JwtBearerDefaults.AuthenticationScheme)
-    .PostConfigure<RsaKeyProvider, IConfiguration>((options, keys, cfg) =>
-    {
-        options.TokenValidationParameters = new TokenValidationParameters
-        {
-            ValidateIssuer = true,
-            ValidateAudience = true,
-            ValidateLifetime = true,
-            ValidateIssuerSigningKey = true,
-            ValidIssuer = cfg["Jwt:Issuer"],
-            ValidAudience = cfg["Jwt:Audience"],
-            IssuerSigningKey = new RsaSecurityKey(keys.PublicKey),
-            ClockSkew = TimeSpan.Zero
-        };
-    });
-
+    .AddPersistence(builder.Configuration)
+    .AddIdentityConfig()
+    .AddJwtAuthentication(builder.Configuration)
+    .AddApplicationServices();
 
 builder.Services.AddAuthorization();
 builder.Services.AddControllers();
@@ -89,9 +27,7 @@ using (var scope = app.Services.CreateScope())
 
 // Configure the HTTP request pipeline.
 if (app.Environment.IsDevelopment())
-{
     app.MapOpenApi();
-}
 
 app.UseHttpsRedirection();
 app.UseAuthentication();

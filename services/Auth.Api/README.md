@@ -1,58 +1,93 @@
+# Auth.Api Service
 
-# Auth.Api Project Structure
+## Project Structure
 
 ```text
-Auth.Domain/
-├── ValueObjects/       (Email, HashedPassword, etc. if you want them)
-└── Rules/              (token expiry rules, password policy — plain logic, no dependencies)
-
-Auth.Infrastructure/
-├── Identity/          (User, RefreshToken — ASP.NET Core Identity entities)
-├── Persistence/
-│   ├── AuthDbContext.cs
-│   ├── IUnitOfWork.cs
-│   ├── UnitOfWork.cs
-│   ├── Migrations/
-│   └── Outbox/          (OutboxMessage entity — no relay code, CDC-based delivery)
-├── Repositories/       (IUserRepository, IRefreshTokenRepository, IOutboxRepository + impls)
-├── Security/           (ITokenService, JwtTokenService, RsaKeyProvider)
-└── Messaging/          (UserRegisteredEvent)
-
-Auth.Application/              ← orchestration / use-case layer
-├── Results/
-│   └── RegisterResult.cs      (RegisterStatus enum + result factory methods)
-└── Services/
-    ├── IAuthService.cs
-    └── AuthService.cs         (RegisterAsync: transaction, repos, outbox, token generation)
-
-Auth.Api/
-├── Controllers/          (AuthController — thin HTTP adapter only; JwksController)
-├── Contracts/            (RegisterRequest, AuthResponse DTOs)
-├── Program.cs
-└── appsettings.json
-
-Auth.Api.Tests/
-├── Fixtures/
-├── IntegrationTests/
-└── UnitTests/
+Auth.Api.sln
+├── Auth.Domain/               ← zero external dependencies
+│   ├── Entities/              (domain entities — no EF/Identity coupling)
+│   ├── ValueObjects/
+│   └── Rules/                 (pure business rules: password policy, token expiry)
+│
+├── Auth.Application/          ← depends on Auth.Domain only
+│   ├── Events/
+│   │   └── UserRegisteredEvent.cs
+│   ├── Interfaces/            (all port interfaces defined here)
+│   │   ├── IUserRepository.cs
+│   │   ├── IRefreshTokenRepository.cs
+│   │   ├── IOutboxRepository.cs
+│   │   ├── IUnitOfWork.cs
+│   │   ├── ITransaction.cs
+│   │   ├── ITokenService.cs
+│   │   └── IJwksProvider.cs
+│   ├── Models/
+│   │   ├── AppUser.cs
+│   │   └── CreateUserResult.cs
+│   ├── Results/
+│   │   └── RegisterResult.cs
+│   └── Services/
+│       ├── IAuthService.cs
+│       └── AuthService.cs     (register use case: transaction, repos, outbox, tokens)
+│
+├── Auth.Infrastructure/       ← depends on Auth.Domain + Auth.Application
+│   ├── Identity/              (User, RefreshToken — ASP.NET Core Identity entities)
+│   ├── Persistence/
+│   │   ├── AuthDbContext.cs
+│   │   ├── UnitOfWork.cs      (implements IUnitOfWork; EfTransaction adapts IDbContextTransaction)
+│   │   ├── Migrations/
+│   │   └── Outbox/            (OutboxMessage entity — no relay code, CDC via Debezium)
+│   ├── Repositories/          (implements IUserRepository, IRefreshTokenRepository, IOutboxRepository)
+│   └── Security/
+│       ├── RsaKeyProvider.cs  (implements IJwksProvider)
+│       └── JwtTokenService.cs (implements ITokenService)
+│
+├── Auth.Api/                  ← depends on Auth.Application + Auth.Infrastructure (DI wiring only)
+│   ├── Controllers/
+│   │   ├── AuthController.cs  (thin HTTP adapter — maps RegisterResult → HTTP status codes)
+│   │   └── JwksController.cs
+│   ├── Contracts/             (RegisterRequest, AuthResponse DTOs)
+│   ├── Extensions/            (PersistenceExtensions, IdentityExtensions, AuthenticationExtensions, ApplicationExtensions)
+│   └── Program.cs
+│
+└── Auth.Api.Tests/
+    ├── Fixtures/
+    ├── IntegrationTests/      (RegisterEndpointTests via WebApplicationFactory + Testcontainers)
+    └── UnitTests/             (EventContractTests)
 ```
 
 ## Dependency direction
 
 ```
-Auth.Api → Auth.Application → Auth.Infrastructure → Auth.Domain
+Auth.Domain  ←  Auth.Application  ←  Auth.Infrastructure  ←  Auth.Api
+                                                          ←  Auth.Api.Tests
 ```
 
-`Auth.Api` retains a direct reference to `Auth.Infrastructure` only for DI registration
-in `Program.cs` (e.g. `AuthDbContext`, `RsaKeyProvider`). Controllers themselves have
-**no dependency** on `Auth.Infrastructure` types.
+> **Rule:** Arrows point inward. No inner layer ever references an outer layer.
+> `Auth.Api` references `Auth.Infrastructure` only for DI registration in the extension
+> methods — controllers themselves only inject interfaces from `Auth.Application`.
 
 ## Layer responsibilities
 
-| Layer | Responsibility |
-|---|---|
-| `Auth.Domain` | Value objects and pure business rules — no framework dependencies |
-| `Auth.Infrastructure` | EF Core, ASP.NET Core Identity entities, repositories, JWT implementation |
-| `Auth.Application` | Use-case orchestration (`AuthService`), result types — no HTTP knowledge |
-| `Auth.Api` | HTTP: routing, status codes, cookies, request/response DTOs |
-| `Auth.Api.Tests` | Integration tests via `WebApplicationFactory` + Testcontainers; unit tests |
+| Layer | Owns | Must never know about |
+|---|---|---|
+| `Auth.Domain` | Business entities, pure rules | EF Core, Identity, HTTP, Kafka |
+| `Auth.Application` | Use-case orchestration, port interfaces, result types | EF Core, Identity, JWT libraries |
+| `Auth.Infrastructure` | Persistence, Identity, JWT signing, RSA keys | HTTP, routing, controllers |
+| `Auth.Api` | HTTP routing, status codes, cookies, DI wiring | Database transactions, outbox |
+
+## Running locally
+
+```bash
+# Start dependencies (Postgres)
+docker compose -f ../../infra/docker-compose.yml up -d
+
+# Run the API (migrations run automatically on startup)
+dotnet run --project Auth.Api
+```
+
+## Testing
+
+```bash
+# Integration tests use Testcontainers (no local Postgres needed)
+dotnet test
+```

@@ -47,10 +47,10 @@ examprep/
 ├── services/
 │   ├── Auth.Api/
 │   │   ├── Auth.Api.sln
-│   │   ├── Auth.Api/                  (host project: Program, config, DI wiring, thin HTTP controllers)
-│   │   ├── Auth.Domain/               (value objects, domain rules)
-│   │   ├── Auth.Application/          (use-case orchestration: AuthService, result types)
-│   │   ├── Auth.Infrastructure/       (EF Core, entities, Kafka consumer for payment-completed)
+│   │   ├── Auth.Api/                  (host: thin HTTP controllers, DI wiring via Extensions/)
+│   │   ├── Auth.Domain/               (value objects, domain rules — no external dependencies)
+│   │   ├── Auth.Application/          (use-case orchestration, port interfaces, result/event types)
+│   │   ├── Auth.Infrastructure/       (EF Core, ASP.NET Identity, JWT, Kafka consumer)
 │   │   └── Auth.Api.Tests/
 │   ├── Payments.Api/
 │   │   ├── Payments.Api.sln
@@ -84,7 +84,7 @@ examprep/
 - Each service is a self-contained solution — a team could extract any one into its own repository later with minimal friction.
 - `Payments.Providers.Stripe` is deliberately isolated as its own project inside Payments.Api — adding a second provider means adding a sibling project (`Payments.Providers.<NewProvider>`) implementing the same internal interface, not modifying Stripe-specific code.
 - `Domain` and `Infrastructure` are separated per service so business rules (scoring formula, rate-limit rules, entitlement rules) don't depend on EF Core or Kafka client libraries.
-- An `Application` layer (already present in Auth.Api) sits between the host project and Infrastructure, owning use-case orchestration (transactions, repository calls, outbox events) and exposing result types to the HTTP layer. Controllers become thin HTTP adapters with no direct dependency on Infrastructure types.
+- An `Application` layer sits between the host project and Infrastructure. It defines all port interfaces (`IUserRepository`, `ITokenService`, etc.), use-case services (`AuthService`), domain events (`UserRegisteredEvent`), and result types. Infrastructure implements these interfaces; controllers depend only on the interfaces, never on concrete Infrastructure types.
 - `infra/debezium` holds connector configuration as data, not application code — each service's database gets a Debezium connector pointed at it; the services themselves contain no outbox-relay logic (see §6).
 - `contracts/events` holds human-readable schema definitions, not shared code, so producers and consumers can evolve independently.
 

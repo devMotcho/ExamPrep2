@@ -1,11 +1,7 @@
 using System.Text.Json;
+using Auth.Application.Events;
+using Auth.Application.Interfaces;
 using Auth.Application.Results;
-using Auth.Infrastructure.Identity;
-using Auth.Infrastructure.Messaging;
-using Auth.Infrastructure.Persistence;
-using Auth.Infrastructure.Persistence.Outbox;
-using Auth.Infrastructure.Repositories;
-using Auth.Infrastructure.Security;
 
 namespace Auth.Application.Services;
 
@@ -22,38 +18,24 @@ public class AuthService(
         if (existing is not null)
             return RegisterResult.EmailAlreadyRegistered();
 
-        var user = new User
-        {
-            UserName = email,
-            Email = email
-        };
-
         await using var transaction = await unitOfWork.BeginTransactionAsync();
 
-        var createResult = await users.CreateAsync(user, password);
+        var createResult = await users.CreateAsync(email, password);
         if (!createResult.Succeeded)
         {
             await transaction.RollbackAsync();
-            return RegisterResult.ValidationFailed(createResult.Errors.Select(e => e.Description));
+            return RegisterResult.ValidationFailed(createResult.Errors);
         }
 
-        var (rawRefreshToken, refreshTokenHash) = tokens.GenerateRefreshToken();
-        await refreshTokens.AddAsync(new RefreshToken
-        {
-            Id = Guid.NewGuid(),
-            UserId = user.Id,
-            TokenHash = refreshTokenHash,
-            ExpiresAt = DateTime.UtcNow.AddDays(30),
-            CreatedAt = DateTime.UtcNow,
-            IsRevoked = false
-        });
+        var user = createResult.User!;
 
-        await outbox.AddAsync(new OutboxMessage
-        {
-            Topic = "user-registered",
-            Key = user.Id,
-            Payload = JsonSerializer.Serialize(new UserRegisteredEvent(user.Id, user.Email!, user.CreatedAt))
-        });
+        var (rawRefreshToken, refreshTokenHash) = tokens.GenerateRefreshToken();
+        await refreshTokens.AddAsync(user.Id, refreshTokenHash, DateTime.UtcNow.AddDays(30));
+
+        await outbox.AddAsync(
+            topic: "user-registered",
+            key: user.Id,
+            payload: JsonSerializer.Serialize(new UserRegisteredEvent(user.Id, user.Email, user.CreatedAt)));
 
         await unitOfWork.SaveChangesAsync();
         await transaction.CommitAsync();

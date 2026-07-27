@@ -1,4 +1,4 @@
-using Auth.Infrastructure.Security;
+using Auth.Application.Interfaces;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.IdentityModel.Tokens;
 
@@ -6,7 +6,7 @@ namespace Auth.Api.Controllers;
 
 [ApiController]
 [Route(".well-known")]
-public class JwksController(RsaKeyProvider keys) : ControllerBase
+public class JwksController(IJwksProvider keys) : ControllerBase
 {
     [HttpGet("jwks.json")]
     public IActionResult Get()
@@ -17,5 +17,4 @@ public class JwksController(RsaKeyProvider keys) : ControllerBase
         jwk.Alg = SecurityAlgorithms.RsaSha256;
         return Ok(new { keys = new[] { jwk } });
     }
-
 }

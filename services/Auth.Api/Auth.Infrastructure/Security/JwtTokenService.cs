@@ -1,7 +1,8 @@
 using System.IdentityModel.Tokens.Jwt;
 using System.Security.Claims;
 using System.Security.Cryptography;
-using Auth.Infrastructure.Identity;
+using Auth.Application.Interfaces;
+using Auth.Application.Models;
 using Microsoft.Extensions.Configuration;
 using Microsoft.IdentityModel.Tokens;
 
@@ -9,18 +10,16 @@ namespace Auth.Infrastructure.Security;
 
 public class JwtTokenService(RsaKeyProvider keys, IConfiguration config) : ITokenService
 {
-    public string GenerateAccessToken(User user)
+    public string GenerateAccessToken(AppUser user)
     {
         var creds = new SigningCredentials(
-            new RsaSecurityKey(keys.PrivateKey)
-            { KeyId = keys.KeyId },
-            SecurityAlgorithms.RsaSha256
-        );
+            new RsaSecurityKey(keys.PrivateKey) { KeyId = keys.KeyId },
+            SecurityAlgorithms.RsaSha256);
 
         var claims = new[]
         {
             new Claim(JwtRegisteredClaimNames.Sub, user.Id),
-            new Claim(JwtRegisteredClaimNames.Email, user.Email!),
+            new Claim(JwtRegisteredClaimNames.Email, user.Email),
             new Claim(JwtRegisteredClaimNames.Jti, Guid.NewGuid().ToString())
         };
 
@@ -29,8 +28,7 @@ public class JwtTokenService(RsaKeyProvider keys, IConfiguration config) : IToke
             audience: config["Jwt:Audience"],
             claims: claims,
             expires: DateTime.UtcNow.AddMinutes(15),
-            signingCredentials: creds
-        );
+            signingCredentials: creds);
 
         return new JwtSecurityTokenHandler().WriteToken(token);
     }

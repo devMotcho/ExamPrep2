@@ -5,6 +5,7 @@ WORKDIR /src
 COPY Auth.Api.sln .
 COPY Auth.Api/Auth.Api.csproj Auth.Api/
 COPY Auth.Domain/Auth.Domain.csproj Auth.Domain/
+COPY Auth.Application/Auth.Application.csproj Auth.Application/
 COPY Auth.Infrastructure/Auth.Infrastructure.csproj Auth.Infrastructure/
 COPY Auth.Api.Tests/Auth.Api.Tests.csproj Auth.Api.Tests/
 RUN dotnet restore Auth.Api.sln
