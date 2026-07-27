@@ -16,6 +16,9 @@ public static class ApplicationExtensions
         services.AddScoped<IUnitOfWork, UnitOfWork>();
         services.AddScoped<ITokenService, JwtTokenService>();
         services.AddScoped<IAuthService, AuthService>();
+        
+        services.AddScoped<IOAuthService, OAuthService>();
+        services.AddSingleton<IExternalAuthProvider, GoogleAuthProvider>();
         return services;
     }
 }

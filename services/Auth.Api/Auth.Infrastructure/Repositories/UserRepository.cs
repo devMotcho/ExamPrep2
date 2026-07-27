@@ -23,6 +23,16 @@ public class UserRepository(UserManager<User> userManager) : IUserRepository
             : CreateUserResult.Failure(result.Errors.Select(e => e.Description));
     }
 
+    public async Task<CreateUserResult> CreateWithoutPasswordAsync(string email)
+    {
+        var user = new User { UserName = email, Email = email, EmailConfirmed = true };
+        var result = await userManager.CreateAsync(user); // No password
+
+        return result.Succeeded
+            ? CreateUserResult.Success(Map(user))
+            : CreateUserResult.Failure(result.Errors.Select(e => e.Description));
+    }
+
     public async Task<AppUser?> FindByIdAsync(string userId)
     {
         var user = await userManager.FindByIdAsync(userId);
