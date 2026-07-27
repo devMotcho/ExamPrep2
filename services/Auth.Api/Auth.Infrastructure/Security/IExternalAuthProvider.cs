@@ -1,5 +1,3 @@
-using Auth.Domain.ValueObjects;
-
 namespace Auth.Infrastructure.Security;
 
 public interface IExternalAuthProvider

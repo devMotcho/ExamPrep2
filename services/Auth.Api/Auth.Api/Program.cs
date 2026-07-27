@@ -1,3 +1,4 @@
+using Auth.Application.Services;
 using Auth.Infrastructure.Identity;
 using Auth.Infrastructure.Persistence;
 using Auth.Infrastructure.Repositories;
@@ -35,6 +36,7 @@ builder.Services.AddScoped<IUserRepository, UserRepository>();
 builder.Services.AddScoped<IRefreshTokenRepository, RefreshTokenRepository>();
 builder.Services.AddScoped<IOutboxRepository, OutboxRepository>();
 builder.Services.AddScoped<IUnitOfWork, UnitOfWork>();
+builder.Services.AddScoped<IAuthService, AuthService>();
 
 // Jwt Bearer Configuration with Asymmetric keys
 // RsaKeyProvider is registered as a singleton so it is only resolved after

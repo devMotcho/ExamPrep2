@@ -6,4 +6,20 @@
     <Nullable>enable</Nullable>
   </PropertyGroup>
 
+  <ItemGroup>
+    <Compile Remove="Repositories\**" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <EmbeddedResource Remove="Repositories\**" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <None Remove="Repositories\**" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <Folder Include="ValueObjects\" />
+  </ItemGroup>
+
 </Project>

@@ -1,77 +1,39 @@
-
-using System.Text.Json;
 using Auth.Api.Contracts;
-using Auth.Infrastructure.Identity;
-using Auth.Infrastructure.Messaging;
-using Auth.Infrastructure.Persistence;
-using Auth.Infrastructure.Persistence.Outbox;
-using Auth.Infrastructure.Repositories;
-using Auth.Infrastructure.Security;
+using Auth.Application.Results;
+using Auth.Application.Services;
 using Microsoft.AspNetCore.Mvc;
 
 namespace Auth.Api.Controllers;
+
 [ApiController]
 [Route("api/auth")]
-public class AuthController(
-    IUserRepository users,
-    IRefreshTokenRepository refreshTokens,
-    IOutboxRepository outbox,
-    IUnitOfWork unitOfWork,
-    ITokenService tokens) : ControllerBase
+public class AuthController(IAuthService authService) : ControllerBase
 {
     [HttpPost("register")]
     public async Task<IActionResult> Register(RegisterRequest req)
     {
-        var existing = await users.FindByEmailAsync(req.Email);
-        if (existing is not null)
-            return Conflict(new { message = "Email already registered." });
+        var result = await authService.RegisterAsync(req.Email, req.Password);
 
-        var user = new User
+        switch (result.Status)
         {
-            UserName = req.Email,
-            Email = req.Email
-        };
+            case RegisterStatus.EmailAlreadyRegistered:
+                return Conflict(new { message = "Email already registered." });
 
-        await using var transaction = await unitOfWork.BeginTransactionAsync();
+            case RegisterStatus.ValidationFailed:
+                return BadRequest(new { errors = result.Errors });
 
-        var createResult = await users.CreateAsync(user, req.Password);
-        if (!createResult.Succeeded)
-        {
-            await transaction.RollbackAsync();
-            return BadRequest(new { errors = createResult.Errors.Select(e => e.Description) });
+            case RegisterStatus.Success:
+                Response.Cookies.Append("refresh_token", result.RawRefreshToken!, new CookieOptions
+                {
+                    HttpOnly = true,
+                    Secure = true,
+                    SameSite = SameSiteMode.Strict,
+                    Expires = DateTimeOffset.UtcNow.AddDays(30)
+                });
+                return CreatedAtAction(nameof(Register), new AuthResponse(result.AccessToken!));
+
+            default:
+                throw new InvalidOperationException($"Unhandled register status: {result.Status}");
         }
-
-        var (rawRefreshToken, refreshTokenHash) = tokens.GenerateRefreshToken();
-        await refreshTokens.AddAsync(new RefreshToken
-        {
-            Id = Guid.NewGuid(),
-            UserId = user.Id,
-            TokenHash = refreshTokenHash,
-            ExpiresAt = DateTime.UtcNow.AddDays(30),
-            CreatedAt = DateTime.UtcNow,
-            IsRevoked = false
-        });
-
-        await outbox.AddAsync(new OutboxMessage
-        {
-            Topic = "user-registered",
-            Key = user.Id,
-            Payload = JsonSerializer.Serialize(new UserRegisteredEvent(user.Id, user.Email, user.CreatedAt))
-        });
-
-        await unitOfWork.SaveChangesAsync();
-        await transaction.CommitAsync();
-
-        var accessToken = tokens.GenerateAccessToken(user);
-
-        Response.Cookies.Append("refresh_token", rawRefreshToken, new CookieOptions
-        {
-            HttpOnly = true,
-            Secure = true,
-            SameSite = SameSiteMode.Strict,
-            Expires = DateTimeOffset.UtcNow.AddDays(30)
-        });
-
-        return CreatedAtAction(nameof(Register), new AuthResponse(accessToken));
     }
 }
