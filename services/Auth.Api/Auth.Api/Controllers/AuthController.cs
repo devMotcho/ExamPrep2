@@ -5,11 +5,25 @@ using Microsoft.AspNetCore.Mvc;
 
 namespace Auth.Api.Controllers;
 
+/// <summary>
+/// Handles authentication tasks including registration, login, and token refreshing.
+/// </summary>
 [ApiController]
 [Route("api/auth")]
 public class AuthController(IAuthService authService) : ControllerBase
 {
+    /// <summary>
+    /// Registers a new user.
+    /// </summary>
+    /// <param name="req">The registration request containing email and password.</param>
+    /// <returns>An AuthResponse with the access token if successful.</returns>
+    /// <response code="201">Registration successful.</response>
+    /// <response code="400">Validation failed.</response>
+    /// <response code="409">Email already registered.</response>
     [HttpPost("register")]
+    [ProducesResponseType(typeof(AuthResponse), StatusCodes.Status201Created)]
+    [ProducesResponseType(StatusCodes.Status400BadRequest)]
+    [ProducesResponseType(StatusCodes.Status409Conflict)]
     public async Task<IActionResult> Register(RegisterRequest req)
     {
         var result = await authService.RegisterAsync(req.Email, req.Password);
@@ -31,7 +45,15 @@ public class AuthController(IAuthService authService) : ControllerBase
         }
     }
 
+    /// <summary>
+    /// Issues a new access token using a valid refresh token.
+    /// </summary>
+    /// <returns>An AuthResponse with the new access token.</returns>
+    /// <response code="200">Refresh successful.</response>
+    /// <response code="401">No refresh token provided, or invalid/expired refresh token.</response>
     [HttpPost("refresh")]
+    [ProducesResponseType(typeof(AuthResponse), StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status401Unauthorized)]
     public async Task<IActionResult> Refresh()
     {
         var rawToken = Request.Cookies["refresh_token"];
@@ -56,7 +78,16 @@ public class AuthController(IAuthService authService) : ControllerBase
         }
     }
 
+    /// <summary>
+    /// Authenticates a user and returns an access token.
+    /// </summary>
+    /// <param name="req">The login request containing email/username and password.</param>
+    /// <returns>An AuthResponse with the access token if successful.</returns>
+    /// <response code="200">Login successful.</response>
+    /// <response code="401">Invalid email/username or password.</response>
     [HttpPost("login")]
+    [ProducesResponseType(typeof(AuthResponse), StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status401Unauthorized)]
     public async Task<IActionResult> Login(LoginRequest req)
     {
         var result = await authService.LoginAsync(req.EmailOrUsername, req.Password);

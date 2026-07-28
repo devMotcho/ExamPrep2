@@ -7,9 +7,22 @@ namespace Auth.Api.Controllers;
 
 [ApiController]
 [Route("api/oauth")]
+/// <summary>
+/// Provides endpoints for handling third-party OAuth logins.
+/// </summary>
 public class OAuthController(IOAuthService oauthService, IConfiguration config) : ControllerBase
 {
+    /// <summary>
+    /// Authenticates a user via a third-party OAuth provider token.
+    /// </summary>
+    /// <param name="provider">The name of the OAuth provider (e.g., google).</param>
+    /// <param name="req">The OAuth login request containing the token.</param>
+    /// <returns>An AuthResponse with the access token if successful.</returns>
+    /// <response code="200">Login successful.</response>
+    /// <response code="401">Invalid token or account could not be created.</response>
     [HttpPost("{provider}/login")]
+    [ProducesResponseType(typeof(AuthResponse), StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status401Unauthorized)]
     public async Task<IActionResult> Login(string provider, OAuthLoginRequest req)
     {
         var result = await oauthService.LoginAsync(provider, req.Token);
@@ -28,7 +41,13 @@ public class OAuthController(IOAuthService oauthService, IConfiguration config) 
         }
     }
 
+    /// <summary>
+    /// Retrieves a list of available and enabled OAuth providers.
+    /// </summary>
+    /// <returns>A JSON object detailing provider status.</returns>
+    /// <response code="200">Successfully retrieved providers.</response>
     [HttpGet("providers")]
+    [ProducesResponseType(StatusCodes.Status200OK)]
     public IActionResult GetAuthProviders()
     {
         // In a real app, this could be dynamic, but for now we read from config
