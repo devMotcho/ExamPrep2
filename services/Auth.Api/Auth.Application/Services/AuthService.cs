@@ -12,6 +12,7 @@ public class AuthService(
     IUnitOfWork unitOfWork,
     ITokenService tokens) : IAuthService
 {
+    /// <inheritdoc/>
     public async Task<RegisterResult> RegisterAsync(string email, string password)
     {
         var existing = await users.FindByEmailAsync(email);
@@ -44,6 +45,7 @@ public class AuthService(
         return RegisterResult.Success(accessToken, rawRefreshToken);
     }
 
+    /// <inheritdoc/>
     public async Task<RefreshResult> RefreshAsync(string rawRefreshToken)
     {
         var tokenHash = tokens.HashRefreshToken(rawRefreshToken);
@@ -76,6 +78,7 @@ public class AuthService(
         return RefreshResult.Success(accessToken, newRawToken);
     }
 
+    /// <inheritdoc/>
     public async Task<LoginResult> LoginAsync(string emailOrUsername, string password)
     {
         var user = await users.FindByEmailOrUsernameAsync(emailOrUsername);
@@ -97,4 +100,27 @@ public class AuthService(
         var accessToken = tokens.GenerateAccessToken(user);
         return LoginResult.Success(accessToken, rawRefreshToken);
     }
+
+    /// <inheritdoc/>
+    public async Task<LogoutResult> LogoutAsync(string rawRefreshToken)
+    {
+        // Hash first — an invalid Base64 value can never match a stored hash.
+        var tokenHash = tokens.HashRefreshToken(rawRefreshToken);
+        if (tokenHash is null)
+            return LogoutResult.TokenNotFound();
+
+        var stored = await refreshTokens.FindByHashAsync(tokenHash);
+        if (stored is null)
+            return LogoutResult.TokenNotRecognised();
+
+        // Revoke and persist in a transaction — if the save fails the token
+        // remains valid, which is safer than silently swallowing the error.
+        await using var transaction = await unitOfWork.BeginTransactionAsync();
+        await refreshTokens.RevokeAsync(stored.Id);
+        await unitOfWork.SaveChangesAsync();
+        await transaction.CommitAsync();
+
+        return LogoutResult.Success();
+    }
 }
+

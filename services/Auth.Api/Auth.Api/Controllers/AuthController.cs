@@ -1,12 +1,13 @@
 using Auth.Api.Contracts;
 using Auth.Application.Results;
 using Auth.Application.Services;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 
 namespace Auth.Api.Controllers;
 
 /// <summary>
-/// Handles authentication tasks including registration, login, and token refreshing.
+/// Handles authentication tasks including registration, login, token refreshing and logout.
 /// </summary>
 [ApiController]
 [Route("api/auth")]
@@ -106,6 +107,33 @@ public class AuthController(IAuthService authService) : ControllerBase
         }
     }
 
+    /// <summary>
+    /// Revokes the current refresh token and clears the authentication cookie.
+    /// Requires a valid access token so that logout is bound to an authenticated session.
+    /// </summary>
+    /// <response code="204">Logout successful. Cookie has been cleared.</response>
+    /// <response code="401">No valid access token provided.</response>
+    [Authorize]
+    [HttpPost("logout")]
+    [ProducesResponseType(StatusCodes.Status204NoContent)]
+    [ProducesResponseType(StatusCodes.Status401Unauthorized)]
+    public async Task<IActionResult> Logout()
+    {
+        // Always expire the cookie on the response, regardless of outcome.
+        // This ensures the browser clears its state even if the token was
+        // already revoked or the cookie value was corrupted.
+        ExpireRefreshCookie();
+
+        var rawToken = Request.Cookies["refresh_token"];
+        if (string.IsNullOrEmpty(rawToken))
+            return NoContent(); // Cookie already absent — client is already logged out
+
+        // Both failure statuses return 204 — callers cannot tell the difference,
+        // preventing an attacker from probing which tokens are still active.
+        await authService.LogoutAsync(rawToken);
+        return NoContent();
+    }
+
     private void SetRefreshCookie(string rawToken) =>
         Response.Cookies.Append("refresh_token", rawToken, new CookieOptions
         {
@@ -113,5 +141,18 @@ public class AuthController(IAuthService authService) : ControllerBase
             Secure = true,
             SameSite = SameSiteMode.Strict,
             Expires = DateTimeOffset.UtcNow.AddDays(30)
+        });
+
+    /// <summary>
+    /// Overwrites the refresh token cookie with an expired, empty value so the
+    /// browser removes it immediately on receipt.
+    /// </summary>
+    private void ExpireRefreshCookie() =>
+        Response.Cookies.Append("refresh_token", string.Empty, new CookieOptions
+        {
+            HttpOnly = true,
+            Secure = true,
+            SameSite = SameSiteMode.Strict,
+            Expires = DateTimeOffset.UnixEpoch // past date forces immediate removal
         });
 }

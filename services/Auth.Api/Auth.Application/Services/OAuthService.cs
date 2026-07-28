@@ -13,6 +13,7 @@ public class OAuthService(
     IUnitOfWork unitOfWork,
     ITokenService tokens) : IOAuthService
 {
+    /// <inheritdoc/>
     public async Task<LoginResult> LoginAsync(string providerName, string token)
     {
         var provider = providers.FirstOrDefault(p => string.Equals(p.ProviderName, providerName, StringComparison.OrdinalIgnoreCase));
