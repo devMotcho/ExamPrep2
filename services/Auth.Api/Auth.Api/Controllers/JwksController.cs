@@ -4,11 +4,20 @@ using Microsoft.IdentityModel.Tokens;
 
 namespace Auth.Api.Controllers;
 
+/// <summary>
+/// Provides the JSON Web Key Set (JWKS) used to verify JWT access tokens.
+/// </summary>
 [ApiController]
 [Route(".well-known")]
 public class JwksController(IJwksProvider keys) : ControllerBase
 {
+    /// <summary>
+    /// Retrieves the public keys in JWKS format.
+    /// </summary>
+    /// <returns>JSON representing the keys.</returns>
+    /// <response code="200">Returns the JWKS payload.</response>
     [HttpGet("jwks.json")]
+    [ProducesResponseType(StatusCodes.Status200OK)]
     public IActionResult Get()
     {
         var key = new RsaSecurityKey(keys.PublicKey) { KeyId = keys.KeyId };

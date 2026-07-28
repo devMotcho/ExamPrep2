@@ -23,6 +23,31 @@ public class UserRepository(UserManager<User> userManager) : IUserRepository
             : CreateUserResult.Failure(result.Errors.Select(e => e.Description));
     }
 
+    public async Task<CreateUserResult> CreateWithoutPasswordAsync(string email)
+    {
+        var user = new User { UserName = email, Email = email, EmailConfirmed = true };
+        var result = await userManager.CreateAsync(user); // No password
+
+        return result.Succeeded
+            ? CreateUserResult.Success(Map(user))
+            : CreateUserResult.Failure(result.Errors.Select(e => e.Description));
+    }
+
+    public async Task<AppUser?> FindByIdAsync(string userId)
+    {
+        var user = await userManager.FindByIdAsync(userId);
+        return user is null ? null : Map(user);
+    }
+
+    public async Task<AppUser?> FindByEmailOrUsernameAsync(string emailOrUsername)
+    {
+        // Try email first (most common), then fall back to username.
+        // UserManager normalises both internally so casing is ignored.
+        var user = await userManager.FindByEmailAsync(emailOrUsername)
+                   ?? await userManager.FindByNameAsync(emailOrUsername);
+        return user is null ? null : Map(user);
+    }
+
     public async Task<bool> CheckPasswordAsync(string userId, string password)
     {
         var user = await userManager.FindByIdAsync(userId);

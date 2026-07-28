@@ -90,3 +90,7 @@ secrets.json
 *.crt
 *.csr
 *.srl
+
+## Manual Testing
+OAuthTestClient.html
+index.html
