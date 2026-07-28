@@ -16,4 +16,10 @@ public interface IUserRepository
     /// on failure, or an empty collection on success.
     /// </summary>
     Task<IEnumerable<string>> SetPasswordAsync(string userId, string newPassword);
+
+    /// <summary>Checks if the user's email has been verified.</summary>
+    Task<bool> IsEmailConfirmedAsync(string userId);
+
+    /// <summary>Marks the user's email as verified.</summary>
+    Task<bool> ConfirmEmailAsync(string userId);
 }

@@ -14,11 +14,13 @@ public static class ApplicationExtensions
         services.AddScoped<IRefreshTokenRepository, RefreshTokenRepository>();
         services.AddScoped<IPasswordResetCodeRepository, PasswordResetCodeRepository>();
         services.AddScoped<IPasswordResetTicketRepository, PasswordResetTicketRepository>();
+        services.AddScoped<IEmailVerificationCodeRepository, EmailVerificationCodeRepository>();
         services.AddScoped<IOutboxRepository, OutboxRepository>();
         services.AddScoped<IUnitOfWork, UnitOfWork>();
         services.AddScoped<ITokenService, JwtTokenService>();
         services.AddScoped<IAuthService, AuthService>();
         services.AddScoped<IPasswordResetService, PasswordResetService>();
+        services.AddScoped<IEmailVerificationService, EmailVerificationService>();
         
         services.AddScoped<IOAuthService, OAuthService>();
         services.AddSingleton<IExternalAuthProvider, GoogleAuthProvider>();

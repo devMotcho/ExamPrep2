@@ -76,5 +76,23 @@ public class UserRepository(UserManager<User> userManager) : IUserRepository
             : addResult.Errors.Select(e => e.Description);
     }
 
+    /// <inheritdoc/>
+    public async Task<bool> IsEmailConfirmedAsync(string userId)
+    {
+        var user = await userManager.FindByIdAsync(userId);
+        return user is not null && await userManager.IsEmailConfirmedAsync(user);
+    }
+
+    /// <inheritdoc/>
+    public async Task<bool> ConfirmEmailAsync(string userId)
+    {
+        var user = await userManager.FindByIdAsync(userId);
+        if (user is null) return false;
+
+        var token = await userManager.GenerateEmailConfirmationTokenAsync(user);
+        var result = await userManager.ConfirmEmailAsync(user, token);
+        return result.Succeeded;
+    }
+
     private static AppUser Map(User user) => new(user.Id, user.Email!, user.CreatedAt);
 }
