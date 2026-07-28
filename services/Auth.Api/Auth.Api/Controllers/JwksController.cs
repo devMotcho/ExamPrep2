@@ -4,11 +4,11 @@ using Microsoft.IdentityModel.Tokens;
 
 namespace Auth.Api.Controllers;
 
-[ApiController]
-[Route(".well-known")]
 /// <summary>
 /// Provides the JSON Web Key Set (JWKS) used to verify JWT access tokens.
 /// </summary>
+[ApiController]
+[Route(".well-known")]
 public class JwksController(IJwksProvider keys) : ControllerBase
 {
     /// <summary>

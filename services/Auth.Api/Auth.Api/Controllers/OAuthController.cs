@@ -5,11 +5,11 @@ using Microsoft.AspNetCore.Mvc;
 
 namespace Auth.Api.Controllers;
 
-[ApiController]
-[Route("api/oauth")]
 /// <summary>
 /// Provides endpoints for handling third-party OAuth logins.
 /// </summary>
+[ApiController]
+[Route("api/oauth")]
 public class OAuthController(IOAuthService oauthService, IConfiguration config) : ControllerBase
 {
     /// <summary>
