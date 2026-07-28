@@ -37,4 +37,12 @@ public class RefreshTokenRepository(AuthDbContext db) : IRefreshTokenRepository
         if (token is not null)
             token.IsRevoked = true;
     }
+
+    /// <inheritdoc/>
+    public async Task RevokeAllForUserAsync(string userId)
+    {
+        await db.RefreshTokens
+            .Where(t => t.UserId == userId && !t.IsRevoked)
+            .ExecuteUpdateAsync(s => s.SetProperty(t => t.IsRevoked, true));
+    }
 }

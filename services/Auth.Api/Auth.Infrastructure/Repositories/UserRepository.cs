@@ -54,5 +54,27 @@ public class UserRepository(UserManager<User> userManager) : IUserRepository
         return user is not null && await userManager.CheckPasswordAsync(user, password);
     }
 
+    /// <inheritdoc/>
+    public async Task<IEnumerable<string>> SetPasswordAsync(string userId, string newPassword)
+    {
+        var user = await userManager.FindByIdAsync(userId);
+        if (user is null)
+            return ["User not found."];
+
+        // UserManager requires us to remove the old password before adding a new one
+        // if we are not verifying the old password (which we aren't, this is a reset).
+        if (await userManager.HasPasswordAsync(user))
+        {
+            var removeResult = await userManager.RemovePasswordAsync(user);
+            if (!removeResult.Succeeded)
+                return removeResult.Errors.Select(e => e.Description);
+        }
+
+        var addResult = await userManager.AddPasswordAsync(user, newPassword);
+        return addResult.Succeeded
+            ? []
+            : addResult.Errors.Select(e => e.Description);
+    }
+
     private static AppUser Map(User user) => new(user.Id, user.Email!, user.CreatedAt);
 }
