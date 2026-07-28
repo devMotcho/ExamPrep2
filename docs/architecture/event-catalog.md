@@ -7,8 +7,10 @@ Delivery semantics: all events are delivered **at-least-once** via Debezium CDC 
 | Topic | Status | Producer | Consumers | Schema |
 |---|---|---|---|---|
 | `user-registered` | ✅ Implemented | Auth.Api | Exams.Api, Analytics.Api | [v1](../../contracts/events/user-registered.v1.md) |
-| `payment-completed` | 🔜 Planned | Payments.Api | Auth.Api | - |
+| `password-reset-requested` | 🔜 Planned | Auth.Api | Notification.Api | - |
+| `payment-completed` | 🔜 Planned | Auth.Api | Notification.Api | - |
 | `user-upgraded-premium` | 🔜 Planned | Auth.Api | Exams.Api, Analytics.Api | - |
+| `payment-completed` | 🔜 Planned | Payments.Api | Auth.Api | - |
 | `exam-session-completed` | 🔜 Planned | Exams.Api | Analytics.Api | - |
 | `study-area-deleted` | 🔜 Planned | Exams.Api | Analytics.Api | — |
 | `question-imported` | 🔜 Planned | Exams.Api | Analytics.Api | — |
