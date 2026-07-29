@@ -10,4 +10,5 @@ public class User : IdentityUser
     public ICollection<PasswordResetCode> PasswordResetCodes { get; set; } = new List<PasswordResetCode>();
     public ICollection<PasswordResetTicket> PasswordResetTickets { get; set; } = new List<PasswordResetTicket>();
     public ICollection<EmailVerificationCode> EmailVerificationCodes { get; set; } = new List<EmailVerificationCode>();
+    public ICollection<PendingOAuthLink> PendingOAuthLinks { get; set; } = new List<PendingOAuthLink>();
 }

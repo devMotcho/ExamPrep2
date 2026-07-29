@@ -15,6 +15,7 @@ public static class IdentityExtensions
                 opt.Password.RequireNonAlphanumeric = true;
                 opt.Lockout.MaxFailedAccessAttempts = 5;
                 opt.Lockout.DefaultLockoutTimeSpan = TimeSpan.FromMinutes(15);
+                opt.Lockout.AllowedForNewUsers = true;
                 opt.User.RequireUniqueEmail = true;
             })
             .AddRoles<IdentityRole>()                    // be able to add roles

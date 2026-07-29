@@ -15,6 +15,7 @@ public static class ApplicationExtensions
         services.AddScoped<IPasswordResetCodeRepository, PasswordResetCodeRepository>();
         services.AddScoped<IPasswordResetTicketRepository, PasswordResetTicketRepository>();
         services.AddScoped<IEmailVerificationCodeRepository, EmailVerificationCodeRepository>();
+        services.AddScoped<IPendingOAuthLinkRepository, PendingOAuthLinkRepository>();
         services.AddScoped<IOutboxRepository, OutboxRepository>();
         services.AddScoped<IUnitOfWork, UnitOfWork>();
         services.AddScoped<ITokenService, JwtTokenService>();

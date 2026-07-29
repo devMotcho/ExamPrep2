@@ -25,6 +25,7 @@ services:
     ports:
       - "5001:8080"
     environment:
+      ASPNETCORE_ENVIRONMENT: Development
       ASPNETCORE_URLS: "http://+:8080"
       ConnectionStrings__AuthDb: "Host=postgres;Port=5432;Database=authdb;Username=app;Password=app"
       Kafka__BootstrapServers: "kafka:9092"
@@ -78,6 +79,32 @@ services:
       kafka:
         condition: service_healthy
 
+  pgadmin-init:
+    image: alpine:latest
+    container_name: examprep-pgadmin-init
+    command: >
+      sh -c "echo 'postgres:5432:*:app:app' > /pgpass/pgpass && chmod 0600 /pgpass/pgpass && chown 5050:5050 /pgpass/pgpass"
+    volumes:
+      - pgpass_data:/pgpass
+
+  pgadmin:
+    image: dpage/pgadmin4:latest
+    container_name: examprep-pgadmin
+    ports:
+      - "5050:80"
+    environment:
+      PGADMIN_DEFAULT_EMAIL: "admin@admin.com"
+      PGADMIN_DEFAULT_PASSWORD: "admin"
+      PGADMIN_SERVER_JSON_FILE: "/pgadmin4/servers.json"
+    volumes:
+      - ./pgadmin/servers.json:/pgadmin4/servers.json:ro
+      - pgpass_data:/pgpass
+    depends_on:
+      pgadmin-init:
+        condition: service_completed_successfully
+      postgres:
+        condition: service_healthy
+
   debezium:
     image: debezium/connect:2.7.3.Final
     container_name: examprep-debezium
@@ -115,3 +142,4 @@ services:
 volumes:
   pgdata:
   kafkadata:
+  pgpass_data:

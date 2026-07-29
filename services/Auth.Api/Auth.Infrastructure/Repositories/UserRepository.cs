@@ -15,7 +15,7 @@ public class UserRepository(UserManager<User> userManager) : IUserRepository
 
     public async Task<CreateUserResult> CreateAsync(string email, string password)
     {
-        var user = new User { UserName = email, Email = email };
+        var user = new User { UserName = email, Email = email, LockoutEnabled = true };
         var result = await userManager.CreateAsync(user, password);
 
         return result.Succeeded
@@ -25,7 +25,7 @@ public class UserRepository(UserManager<User> userManager) : IUserRepository
 
     public async Task<CreateUserResult> CreateWithoutPasswordAsync(string email)
     {
-        var user = new User { UserName = email, Email = email, EmailConfirmed = true };
+        var user = new User { UserName = email, Email = email, EmailConfirmed = true, LockoutEnabled = true };
         var result = await userManager.CreateAsync(user); // No password
 
         return result.Succeeded
@@ -92,6 +92,40 @@ public class UserRepository(UserManager<User> userManager) : IUserRepository
         var token = await userManager.GenerateEmailConfirmationTokenAsync(user);
         var result = await userManager.ConfirmEmailAsync(user, token);
         return result.Succeeded;
+    }
+
+    /// <inheritdoc/>
+    public async Task<AppUser?> FindByLoginAsync(string provider, string providerKey)
+    {
+        var user = await userManager.FindByLoginAsync(provider, providerKey);
+        return user is null ? null : Map(user);
+    }
+
+    /// <inheritdoc/>
+    public async Task AddLoginAsync(string userId, string provider, string providerKey)
+    {
+        var user = await userManager.FindByIdAsync(userId);
+        if (user is not null)
+        {
+            await userManager.AddLoginAsync(user, new UserLoginInfo(provider, providerKey, provider));
+        }
+    }
+
+    /// <inheritdoc/>
+    public async Task<bool> IsLockedOutAsync(string userId)
+    {
+        var user = await userManager.FindByIdAsync(userId);
+        return user is not null && await userManager.IsLockedOutAsync(user);
+    }
+
+    /// <inheritdoc/>
+    public async Task AccessFailedAsync(string userId)
+    {
+        var user = await userManager.FindByIdAsync(userId);
+        if (user is not null)
+        {
+            await userManager.AccessFailedAsync(user);
+        }
     }
 
     private static AppUser Map(User user) => new(user.Id, user.Email!, user.CreatedAt);

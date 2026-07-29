@@ -29,4 +29,15 @@ public interface IOAuthService
     /// unknown, the token is invalid, or account creation fails.
     /// </returns>
     Task<LoginResult> LoginAsync(string provider, string token);
+
+    /// <summary>
+    /// Confirms an account link request using the pending ticket and the existing account's password.
+    /// This links a third-party identity to the user's password-based account.
+    /// </summary>
+    /// <param name="linkTicket">The short-lived cryptographic ticket generated during the initial OAuth login collision.</param>
+    /// <param name="password">The password of the existing user account to prove ownership.</param>
+    /// <returns>
+    /// A <see cref="ConfirmLinkResult"/> indicating success (with tokens), invalid password, or invalid/expired ticket.
+    /// </returns>
+    Task<ConfirmLinkResult> ConfirmLinkAsync(string linkTicket, string password);
 }

@@ -4,5 +4,6 @@ public record ExternalUserInfo(
     string Email,
     string Name,
     string Provider,
-    string ProviderId
+    string ProviderId,
+    bool EmailVerified
 );

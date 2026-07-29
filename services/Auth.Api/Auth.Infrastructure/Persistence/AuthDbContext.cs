@@ -13,6 +13,7 @@ public class AuthDbContext(DbContextOptions<AuthDbContext> options)
     public DbSet<PasswordResetCode> PasswordResetCodes => Set<PasswordResetCode>();
     public DbSet<PasswordResetTicket> PasswordResetTickets => Set<PasswordResetTicket>();
     public DbSet<EmailVerificationCode> EmailVerificationCodes => Set<EmailVerificationCode>();
+    public DbSet<PendingOAuthLink> PendingOAuthLinks => Set<PendingOAuthLink>();
 
     protected override void OnModelCreating(ModelBuilder builder)
     {
@@ -40,6 +41,12 @@ public class AuthDbContext(DbContextOptions<AuthDbContext> options)
             .HasMany(u => u.EmailVerificationCodes)
             .WithOne(c => c.User)
             .HasForeignKey(c => c.UserId)
+            .OnDelete(DeleteBehavior.Cascade);
+
+        builder.Entity<User>()
+            .HasMany(u => u.PendingOAuthLinks)
+            .WithOne(p => p.User)
+            .HasForeignKey(p => p.UserId)
             .OnDelete(DeleteBehavior.Cascade);
 
         builder.Entity<RefreshToken>()

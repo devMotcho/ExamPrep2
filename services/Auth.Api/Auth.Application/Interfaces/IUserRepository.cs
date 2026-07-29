@@ -22,4 +22,16 @@ public interface IUserRepository
 
     /// <summary>Marks the user's email as verified.</summary>
     Task<bool> ConfirmEmailAsync(string userId);
+
+    /// <summary>Finds a user by an external login provider.</summary>
+    Task<AppUser?> FindByLoginAsync(string provider, string providerKey);
+
+    /// <summary>Links an external login to the user account.</summary>
+    Task AddLoginAsync(string userId, string provider, string providerKey);
+
+    /// <summary>Checks if the user is locked out.</summary>
+    Task<bool> IsLockedOutAsync(string userId);
+
+    /// <summary>Records a failed access attempt.</summary>
+    Task AccessFailedAsync(string userId);
 }
