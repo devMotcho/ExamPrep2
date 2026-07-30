@@ -3,7 +3,8 @@ using Auth.Application.Events;
 using Auth.Application.Interfaces;
 using Auth.Application.Results;
 using Auth.Application.Models;
-using Auth.Application.Constants;
+
+using Auth.Domain.Rules;
 
 namespace Auth.Application.Services;
 
@@ -54,7 +55,7 @@ public class OAuthService(
             expiresAt: DateTime.UtcNow.Add(AuthLifetimes.LinkTicketLifetime));
         await unitOfWork.SaveChangesAsync();
 
-        return LoginResult.AccountLinkRequired(rawTicket, MaskEmail(existingUser.Email));
+        return LoginResult.AccountLinkRequired(rawTicket, EmailMasking.Mask(existingUser.Email));
     }
 
     /// <inheritdoc/>
@@ -66,7 +67,7 @@ public class OAuthService(
         if (pending is null || pending.IsUsed || pending.ExpiresAt < DateTime.UtcNow)
             return ConfirmLinkResult.InvalidOrExpiredTicket();
 
-        if (pending.Attempts >= AuthAttempts.MaxLinkAttempts)
+        if (pending.Attempts >= AuthLifetimes.MaxLinkAttempts)
             return ConfirmLinkResult.TooManyAttempts();
 
         var user = await users.FindByIdAsync(pending.UserId);
@@ -133,9 +134,5 @@ public class OAuthService(
         return LoginResult.Success(accessToken, rawRefreshToken);
     }
 
-    private static string MaskEmail(string email)
-    {
-        var atIndex = email.IndexOf('@');
-        return atIndex <= 2 ? email : $"{email[..2]}***{email[atIndex..]}";
-    }
+
 }

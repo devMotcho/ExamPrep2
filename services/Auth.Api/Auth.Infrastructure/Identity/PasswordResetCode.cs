@@ -26,7 +26,7 @@ public class PasswordResetCode
 
     /// <summary>
     /// Incremented on every failed verify attempt. Locked out at
-    /// <see cref="Auth.Application.Constants.AuthAttempts.MaxResetPasswordAttempts"/>.
+    /// <see cref="Auth.Domain.Rules.AuthLifetimes.MaxCodeAttempts"/>.
     /// </summary>
     public int Attempts { get; set; }
 

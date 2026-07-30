@@ -8,7 +8,7 @@ public record PasswordResetRequestRequest(
 
 public record PasswordResetVerifyRequest(
     [Required, EmailAddress] string Email,
-    [Required, StringLength(8, MinimumLength = 8)] string Code
+    [Required, StringLength(Auth.Domain.Rules.OtpRules.CodeLength, MinimumLength = Auth.Domain.Rules.OtpRules.CodeLength)] string Code
 );
 
 public record PasswordResetConfirmRequest(

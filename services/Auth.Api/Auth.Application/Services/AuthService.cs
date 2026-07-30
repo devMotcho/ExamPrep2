@@ -1,8 +1,9 @@
 using System.Text.Json;
-using Auth.Application.Constants;
+
 using Auth.Application.Events;
 using Auth.Application.Interfaces;
 using Auth.Application.Results;
+using Auth.Domain.Rules;
 
 namespace Auth.Application.Services;
 
@@ -45,7 +46,7 @@ public class AuthService(
         if (storedCode is null || storedCode.ExpiresAt < DateTime.UtcNow)
             return RegisterResult.InvalidOrExpiredCode();
 
-        if (storedCode.Attempts >= AuthAttempts.MaxEmailVerificationCodeAttempts)
+        if (storedCode.Attempts >= AuthLifetimes.MaxCodeAttempts)
             return RegisterResult.TooManyAttempts();
 
         if (tokens.HashOtpCode(code) != storedCode.CodeHash)

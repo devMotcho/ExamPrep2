@@ -3,6 +3,7 @@ using System.Security.Claims;
 using System.Security.Cryptography;
 using Auth.Application.Interfaces;
 using Auth.Application.Models;
+using Auth.Domain.Rules;
 using Microsoft.Extensions.Configuration;
 using Microsoft.IdentityModel.Tokens;
 
@@ -27,7 +28,7 @@ public class JwtTokenService(RsaKeyProvider keys, IConfiguration config) : IToke
             issuer: config["Jwt:Issuer"],
             audience: config["Jwt:Audience"],
             claims: claims,
-            expires: DateTime.UtcNow.AddMinutes(15),
+            expires: DateTime.UtcNow.Add(AuthLifetimes.AccessTokenLifetime),
             signingCredentials: creds);
 
         return new JwtSecurityTokenHandler().WriteToken(token);
@@ -35,7 +36,7 @@ public class JwtTokenService(RsaKeyProvider keys, IConfiguration config) : IToke
 
     public (string RawToken, string TokenHash) GenerateRefreshToken()
     {
-        var bytes = RandomNumberGenerator.GetBytes(64);
+        var bytes = RandomNumberGenerator.GetBytes(TokenRules.RefreshTokenByteLength);
         var rawToken = Convert.ToBase64String(bytes);
         var tokenHash = Convert.ToBase64String(SHA256.HashData(bytes));
         return (rawToken, tokenHash);
@@ -58,12 +59,12 @@ public class JwtTokenService(RsaKeyProvider keys, IConfiguration config) : IToke
     {
         // Use a random uint, take modulo 100_000_000 to get 0–99_999_999,
         // then zero-pad to 8 digits so the code is always the same length.
-        var value = RandomNumberGenerator.GetInt32(0, 100_000_000);
-        return value.ToString("D8");
+        var value = RandomNumberGenerator.GetInt32(0, OtpRules.MaxOtpValue);
+        return value.ToString($"D{OtpRules.CodeLength}");
     }
 
     public string GenerateResetTicket() =>
-        Convert.ToBase64String(RandomNumberGenerator.GetBytes(64));
+        Convert.ToBase64String(RandomNumberGenerator.GetBytes(TokenRules.ResetTicketByteLength));
 
     public string HashOtpCode(string code) =>
         Convert.ToBase64String(SHA256.HashData(System.Text.Encoding.UTF8.GetBytes(code)));

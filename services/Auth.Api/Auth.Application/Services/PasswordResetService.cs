@@ -1,10 +1,11 @@
 using System.Security.Cryptography;
 using System.Text;
 using System.Text.Json;
-using Auth.Application.Constants;
+
 using Auth.Application.Events;
 using Auth.Application.Interfaces;
 using Auth.Application.Results;
+using Auth.Domain.Rules;
 
 namespace Auth.Application.Services;
 
@@ -33,7 +34,7 @@ public class PasswordResetService(
 
             await using var transaction = await unitOfWork.BeginTransactionAsync();
 
-            await codes.AddAsync(user.Id, codeHash, DateTime.UtcNow.Add(AuthLifetimes.ResetPasswordCodeLifetime));
+            await codes.AddAsync(user.Id, codeHash, DateTime.UtcNow.Add(AuthLifetimes.PasswordResetCodeLifetime));
 
             // Publish the event with the raw code so Notification.Api can embed
             // it in the email. Auth.Api only stores the hash.
@@ -63,7 +64,7 @@ public class PasswordResetService(
         if (stored is null || stored.ExpiresAt <= DateTime.UtcNow)
             return PasswordResetVerifyResult.CodeNotFound();
 
-        if (stored.Attempts >= AuthAttempts.MaxResetPasswordAttempts)
+        if (stored.Attempts >= AuthLifetimes.MaxCodeAttempts)
             return PasswordResetVerifyResult.TooManyAttempts();
 
         var submittedHash = tokenService.HashOtpCode(code);
@@ -80,7 +81,7 @@ public class PasswordResetService(
             await failTx.CommitAsync();
 
             // Re-read attempt count to return the most accurate status
-            return stored.Attempts + 1 >= AuthAttempts.MaxResetPasswordAttempts
+            return stored.Attempts + 1 >= AuthLifetimes.MaxCodeAttempts
                 ? PasswordResetVerifyResult.TooManyAttempts()
                 : PasswordResetVerifyResult.CodeInvalid();
         }
@@ -91,7 +92,7 @@ public class PasswordResetService(
 
         await using var successTx = await unitOfWork.BeginTransactionAsync();
         await codes.MarkUsedAsync(stored.Id);
-        await tickets.AddAsync(user.Id, ticketHash, DateTime.UtcNow.Add(AuthLifetimes.ResetPasswordTicketLifetime));
+        await tickets.AddAsync(user.Id, ticketHash, DateTime.UtcNow.Add(AuthLifetimes.PasswordResetTicketLifetime));
         await unitOfWork.SaveChangesAsync();
         await successTx.CommitAsync();
 

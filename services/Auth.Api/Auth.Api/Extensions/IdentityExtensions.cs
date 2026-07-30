@@ -1,3 +1,4 @@
+using Auth.Domain.Rules;
 using Auth.Infrastructure.Identity;
 using Auth.Infrastructure.Persistence;
 using Microsoft.AspNetCore.Identity;
@@ -11,10 +12,10 @@ public static class IdentityExtensions
         services
             .AddIdentity<User, IdentityRole>(opt =>
             {
-                opt.Password.RequiredLength = 8;
-                opt.Password.RequireNonAlphanumeric = true;
-                opt.Lockout.MaxFailedAccessAttempts = 5;
-                opt.Lockout.DefaultLockoutTimeSpan = TimeSpan.FromMinutes(15);
+                opt.Password.RequiredLength = PasswordRules.MinimumLength;
+                opt.Password.RequireNonAlphanumeric = PasswordRules.RequireNonAlphanumeric;
+                opt.Lockout.MaxFailedAccessAttempts = AuthLifetimes.MaxLoginAttempts;
+                opt.Lockout.DefaultLockoutTimeSpan = AuthLifetimes.LoginLockoutLifetime;
                 opt.Lockout.AllowedForNewUsers = true;
                 opt.User.RequireUniqueEmail = true;
             })

@@ -1,6 +1,6 @@
-
 using Auth.Api.Constants;
-using Auth.Application.Constants;
+
+using Auth.Domain.Rules;
 
 namespace Auth.Api.Services;
 

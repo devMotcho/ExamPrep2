@@ -7,4 +7,4 @@ public record RequestEmailVerificationRequest([Required, EmailAddress] string Em
 public record RegisterRequest(
     [Required, EmailAddress] string Email,
     [Required] string Code,
-    [Required, MinLength(8)] string Password);
+    [Required, MinLength(Auth.Domain.Rules.PasswordRules.MinimumLength)] string Password);
