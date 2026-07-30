@@ -6,7 +6,7 @@ namespace Auth.Application.Models;
 /// </summary>
 public record EmailVerificationCodeModel(
     Guid Id,
-    string UserId,
+    string Email,
     string CodeHash,
     DateTime ExpiresAt,
     int Attempts,

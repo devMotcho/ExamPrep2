@@ -1,3 +1,4 @@
+using Auth.Api.Services;
 using Auth.Application.Interfaces;
 using Auth.Application.Services;
 using Auth.Infrastructure.Persistence;
@@ -21,7 +22,7 @@ public static class ApplicationExtensions
         services.AddScoped<ITokenService, JwtTokenService>();
         services.AddScoped<IAuthService, AuthService>();
         services.AddScoped<IPasswordResetService, PasswordResetService>();
-        services.AddScoped<IEmailVerificationService, EmailVerificationService>();
+        services.AddScoped<ICookieService, CookieService>();
         
         services.AddScoped<IOAuthService, OAuthService>();
         services.AddSingleton<IExternalAuthProvider, GoogleAuthProvider>();

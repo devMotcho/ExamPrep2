@@ -205,7 +205,7 @@ public class OAuthEndpointTests : IClassFixture<AuthApiWebApplicationFactory>
 
         // 3. The ticket and account should now be locked. A 6th attempt with the CORRECT password should fail.
         var lockedResponse = await _client.PostAsJsonAsync("/api/auth/oauth/link/confirm", new ConfirmLinkRequest(ticket, "Password123!"));
-        Assert.Equal(HttpStatusCode.BadRequest, lockedResponse.StatusCode); // Returns InvalidOrExpiredTicket -> BadRequest
+        Assert.Equal(HttpStatusCode.TooManyRequests, lockedResponse.StatusCode);
 
         // Verify Identity account lockout
         var db = scope.ServiceProvider.GetRequiredService<AuthDbContext>();

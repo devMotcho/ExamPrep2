@@ -1,4 +1,6 @@
+using Auth.Api.Constants;
 using Auth.Api.Contracts;
+using Auth.Api.Services;
 using Auth.Application.Results;
 using Auth.Application.Services;
 using Microsoft.AspNetCore.Authorization;
@@ -11,39 +13,55 @@ namespace Auth.Api.Controllers;
 /// </summary>
 [ApiController]
 [Route("api/auth")]
-public class AuthController(IAuthService authService) : ControllerBase
+public class AuthController(IAuthService authService, ICookieService cookieService) : ControllerBase
 {
     /// <summary>
-    /// Registers a new user.
+    /// Requests a new email verification code (OTP).
     /// </summary>
-    /// <param name="req">The registration request containing email and password.</param>
+    /// <param name="req">The request containing the email address.</param>
+    /// <returns>A generic success message, regardless of whether the email is already registered.</returns>
+    /// <response code="200">The request was processed (a code may have been sent).</response>
+    [HttpPost("email-verification/request")]
+    [ProducesResponseType(StatusCodes.Status200OK)]
+    public async Task<IActionResult> RequestEmailVerification(RequestEmailVerificationRequest req)
+    {
+        await authService.RequestEmailVerificationAsync(req.Email);
+        return Ok(new { message = "If this email isn't already registered, a code has been sent." });
+    }
+
+    /// <summary>
+    /// Registers a new user using a previously requested verification code.
+    /// </summary>
+    /// <param name="req">The registration request containing email, verification code, and password.</param>
     /// <returns>An AuthResponse with the access token if successful.</returns>
-    /// <response code="201">Registration successful.</response>
-    /// <response code="400">Validation failed.</response>
+    /// <response code="201">Registration successful and tokens issued.</response>
+    /// <response code="400">Validation failed or invalid/expired code.</response>
     /// <response code="409">Email already registered.</response>
+    /// <response code="429">Too many failed verification attempts.</response>
     [HttpPost("register")]
     [ProducesResponseType(typeof(AuthResponse), StatusCodes.Status201Created)]
     [ProducesResponseType(StatusCodes.Status400BadRequest)]
     [ProducesResponseType(StatusCodes.Status409Conflict)]
+    [ProducesResponseType(StatusCodes.Status429TooManyRequests)]
     public async Task<IActionResult> Register(RegisterRequest req)
     {
-        var result = await authService.RegisterAsync(req.Email, req.Password);
+        var result = await authService.RegisterAsync(req.Email, req.Code, req.Password);
 
-        switch (result.Status)
+        return result.Status switch
         {
-            case RegisterStatus.EmailAlreadyRegistered:
-                return Conflict(new { message = "Email already registered." });
+            RegisterStatus.EmailAlreadyRegistered => Conflict(new { message = "Email already registered." }),
+            RegisterStatus.InvalidOrExpiredCode => BadRequest(new { message = "Invalid or expired code." }),
+            RegisterStatus.TooManyAttempts => StatusCode(429, new { message = "Too many attempts. Request a new code." }),
+            RegisterStatus.ValidationFailed => BadRequest(new { errors = result.Errors }),
+            RegisterStatus.Success => IssueSuccessResponse(result),
+            _ => throw new InvalidOperationException()
+        };
+    }
 
-            case RegisterStatus.ValidationFailed:
-                return BadRequest(new { errors = result.Errors });
-
-            case RegisterStatus.Success:
-                SetRefreshCookie(result.RawRefreshToken!);
-                return CreatedAtAction(nameof(Register), new AuthResponse(result.AccessToken!));
-
-            default:
-                throw new InvalidOperationException($"Unhandled register status: {result.Status}");
-        }
+    private IActionResult IssueSuccessResponse(RegisterResult result)
+    {
+        cookieService.SetRefreshTokenCookie(Response, result.RawRefreshToken!);
+        return CreatedAtAction(nameof(Register), new AuthResponse(result.AccessToken!));
     }
 
     /// <summary>
@@ -57,7 +75,7 @@ public class AuthController(IAuthService authService) : ControllerBase
     [ProducesResponseType(StatusCodes.Status401Unauthorized)]
     public async Task<IActionResult> Refresh()
     {
-        var rawToken = Request.Cookies["refresh_token"];
+        var rawToken = Request.Cookies[CookieNames.RefreshToken];
         if (string.IsNullOrEmpty(rawToken))
             return Unauthorized(new { message = "No refresh token provided." });
 
@@ -71,7 +89,7 @@ public class AuthController(IAuthService authService) : ControllerBase
                 return Unauthorized(new { message = "Invalid or expired refresh token." });
 
             case RefreshStatus.Success:
-                SetRefreshCookie(result.RawRefreshToken!);
+                cookieService.SetRefreshTokenCookie(Response, result.RawRefreshToken!);
                 return Ok(new AuthResponse(result.AccessToken!));
 
             default:
@@ -86,9 +104,13 @@ public class AuthController(IAuthService authService) : ControllerBase
     /// <returns>An AuthResponse with the access token if successful.</returns>
     /// <response code="200">Login successful.</response>
     /// <response code="401">Invalid email/username or password.</response>
+    /// <response code="403">Email verification required.</response>
+    /// <response code="429">Account locked due to too many failed attempts.</response>
     [HttpPost("login")]
     [ProducesResponseType(typeof(AuthResponse), StatusCodes.Status200OK)]
     [ProducesResponseType(StatusCodes.Status401Unauthorized)]
+    [ProducesResponseType(StatusCodes.Status403Forbidden)]
+    [ProducesResponseType(StatusCodes.Status429TooManyRequests)]
     public async Task<IActionResult> Login(LoginRequest req)
     {
         var result = await authService.LoginAsync(req.EmailOrUsername, req.Password);
@@ -98,8 +120,14 @@ public class AuthController(IAuthService authService) : ControllerBase
             case LoginStatus.InvalidCredentials:
                 return Unauthorized(new { message = "Invalid email/username or password." });
 
+            case LoginStatus.TooManyAttempts:
+                return StatusCode(StatusCodes.Status429TooManyRequests, new { message = "Account locked due to too many failed attempts. Please try again later." });
+
+            case LoginStatus.EmailNotVerified:
+                return StatusCode(StatusCodes.Status403Forbidden, new { message = "Email verification required before login." });
+
             case LoginStatus.Success:
-                SetRefreshCookie(result.RawRefreshToken!);
+                cookieService.SetRefreshTokenCookie(Response, result.RawRefreshToken!);
                 return Ok(new AuthResponse(result.AccessToken!));
 
             default:
@@ -122,9 +150,10 @@ public class AuthController(IAuthService authService) : ControllerBase
         // Always expire the cookie on the response, regardless of outcome.
         // This ensures the browser clears its state even if the token was
         // already revoked or the cookie value was corrupted.
-        ExpireRefreshCookie();
+        cookieService.ExpireRefreshTokenCookie(Response);
 
-        var rawToken = Request.Cookies["refresh_token"];
+
+        var rawToken = Request.Cookies[CookieNames.RefreshToken];
         if (string.IsNullOrEmpty(rawToken))
             return NoContent(); // Cookie already absent — client is already logged out
 
@@ -134,25 +163,4 @@ public class AuthController(IAuthService authService) : ControllerBase
         return NoContent();
     }
 
-    private void SetRefreshCookie(string rawToken) =>
-        Response.Cookies.Append("refresh_token", rawToken, new CookieOptions
-        {
-            HttpOnly = true,
-            Secure = true,
-            SameSite = SameSiteMode.Strict,
-            Expires = DateTimeOffset.UtcNow.AddDays(30)
-        });
-
-    /// <summary>
-    /// Overwrites the refresh token cookie with an expired, empty value so the
-    /// browser removes it immediately on receipt.
-    /// </summary>
-    private void ExpireRefreshCookie() =>
-        Response.Cookies.Append("refresh_token", string.Empty, new CookieOptions
-        {
-            HttpOnly = true,
-            Secure = true,
-            SameSite = SameSiteMode.Strict,
-            Expires = DateTimeOffset.UnixEpoch // past date forces immediate removal
-        });
 }

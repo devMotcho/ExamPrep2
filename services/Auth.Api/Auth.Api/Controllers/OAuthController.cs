@@ -1,4 +1,5 @@
 using Auth.Api.Contracts;
+using Auth.Api.Services;
 using Auth.Application.Results;
 using Auth.Application.Services;
 using Microsoft.AspNetCore.Mvc;
@@ -10,7 +11,7 @@ namespace Auth.Api.Controllers;
 /// </summary>
 [ApiController]
 [Route("api/auth/oauth")]
-public class OAuthController(IOAuthService oauthService, IConfiguration config) : ControllerBase
+public class OAuthController(IOAuthService oauthService, IConfiguration config, ICookieService cookieService) : ControllerBase
 {
     /// <summary>
     /// Authenticates a user using an OAuth token provided by a third-party identity provider.
@@ -46,7 +47,7 @@ public class OAuthController(IOAuthService oauthService, IConfiguration config) 
                 });
 
             case LoginStatus.Success:
-                SetRefreshTokenCookie(result.RawRefreshToken!);
+                cookieService.SetRefreshTokenCookie(Response, result.RawRefreshToken!);
                 return Ok(new AuthResponse(result.AccessToken!));
 
             default:
@@ -60,12 +61,14 @@ public class OAuthController(IOAuthService oauthService, IConfiguration config) 
     /// <param name="req">The request body containing the link ticket and the user's password.</param>
     /// <returns>Returns 200 OK with a JWT if successful. Returns 401 Unauthorized for incorrect password, or 400 BadRequest for an invalid ticket.</returns>
     /// <response code="200">Successfully linked account and authenticated.</response>
-    /// <response code="400">The link ticket is invalid, expired, or has reached the maximum failed attempts.</response>
-    /// <response code="401">Incorrect password or the account is locked out.</response>
+    /// <response code="400">The link ticket is invalid or expired.</response>
+    /// <response code="401">Incorrect password.</response>
+    /// <response code="429">Account locked due to too many failed attempts.</response>
     [HttpPost("link/confirm")]
     [ProducesResponseType(StatusCodes.Status200OK)]
     [ProducesResponseType(StatusCodes.Status400BadRequest)]
     [ProducesResponseType(StatusCodes.Status401Unauthorized)]
+    [ProducesResponseType(StatusCodes.Status429TooManyRequests)]
     public async Task<IActionResult> ConfirmLink(ConfirmLinkRequest req)
     {
         var result = await oauthService.ConfirmLinkAsync(req.LinkTicket, req.Password);
@@ -75,11 +78,14 @@ public class OAuthController(IOAuthService oauthService, IConfiguration config) 
             case ConfirmLinkStatus.InvalidOrExpiredTicket:
                 return BadRequest(new { message = "This link request has expired. Please try signing in again." });
 
+            case ConfirmLinkStatus.TooManyAttempts:
+                return StatusCode(StatusCodes.Status429TooManyRequests, new { message = "Account locked due to too many failed attempts. Please try again later." });
+
             case ConfirmLinkStatus.InvalidPassword:
                 return Unauthorized(new { message = "Incorrect password." });
 
             case ConfirmLinkStatus.Success:
-                SetRefreshTokenCookie(result.RawRefreshToken!);
+                cookieService.SetRefreshTokenCookie(Response, result.RawRefreshToken!);
                 return Ok(new AuthResponse(result.AccessToken!));
 
             default:
@@ -108,13 +114,4 @@ public class OAuthController(IOAuthService oauthService, IConfiguration config) 
             }
         });
     }
-
-    private void SetRefreshTokenCookie(string rawToken) =>
-        Response.Cookies.Append("refresh_token", rawToken, new CookieOptions
-        {
-            HttpOnly = true,
-            Secure = true,
-            SameSite = SameSiteMode.Strict,
-            Expires = DateTimeOffset.UtcNow.AddDays(30)
-        });
 }

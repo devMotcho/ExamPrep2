@@ -13,14 +13,20 @@ public class UserRepository(UserManager<User> userManager) : IUserRepository
         return user is null ? null : Map(user);
     }
 
-    public async Task<CreateUserResult> CreateAsync(string email, string password)
+    public async Task<CreateUserResult> CreateAsync(string email, string password, bool emailConfirmed = false)
     {
-        var user = new User { UserName = email, Email = email, LockoutEnabled = true };
-        var result = await userManager.CreateAsync(user, password);
+        var user = new User
+        {
+            UserName = email,
+            Email = email,
+            EmailConfirmed = emailConfirmed
+        };
 
-        return result.Succeeded
-            ? CreateUserResult.Success(Map(user))
-            : CreateUserResult.Failure(result.Errors.Select(e => e.Description));
+        var result = await userManager.CreateAsync(user, password);
+        if (!result.Succeeded)
+            return CreateUserResult.Failure(result.Errors.Select(e => e.Description));
+
+        return CreateUserResult.Success(Map(user));
     }
 
     public async Task<CreateUserResult> CreateWithoutPasswordAsync(string email)
@@ -51,7 +57,20 @@ public class UserRepository(UserManager<User> userManager) : IUserRepository
     public async Task<bool> CheckPasswordAsync(string userId, string password)
     {
         var user = await userManager.FindByIdAsync(userId);
-        return user is not null && await userManager.CheckPasswordAsync(user, password);
+        return user != null && await userManager.CheckPasswordAsync(user, password);
+    }
+
+    public async Task<(bool Succeeded, IEnumerable<string> Errors)> ValidatePasswordAsync(string password)
+    {
+        var validators = userManager.PasswordValidators;
+        var errors = new List<string>();
+        foreach (var validator in validators)
+        {
+            var result = await validator.ValidateAsync(userManager, null!, password);
+            if (!result.Succeeded)
+                errors.AddRange(result.Errors.Select(e => e.Description));
+        }
+        return (errors.Count == 0, errors);
     }
 
     /// <inheritdoc/>
@@ -125,6 +144,16 @@ public class UserRepository(UserManager<User> userManager) : IUserRepository
         if (user is not null)
         {
             await userManager.AccessFailedAsync(user);
+        }
+    }
+
+    /// <inheritdoc/>
+    public async Task ResetAccessFailedCountAsync(string userId)
+    {
+        var user = await userManager.FindByIdAsync(userId);
+        if (user is not null)
+        {
+            await userManager.ResetAccessFailedCountAsync(user);
         }
     }
 

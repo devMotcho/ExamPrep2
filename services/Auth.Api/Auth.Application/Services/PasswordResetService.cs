@@ -1,6 +1,7 @@
 using System.Security.Cryptography;
 using System.Text;
 using System.Text.Json;
+using Auth.Application.Constants;
 using Auth.Application.Events;
 using Auth.Application.Interfaces;
 using Auth.Application.Results;
@@ -17,19 +18,6 @@ public class PasswordResetService(
     IUnitOfWork unitOfWork,
     ITokenService tokenService) : IPasswordResetService
 {
-    /// <summary>
-    /// Maximum failed verify attempts before the code is considered locked.
-    /// Exposed as a constant so tests can assert against it.
-    /// </summary>
-    public const int MaxAttempts = 5;
-
-    /// <summary>How long a generated OTP code remains valid.</summary>
-    private static readonly TimeSpan CodeTtl = TimeSpan.FromMinutes(15);
-
-    /// <summary>How long the reset ticket remains valid after a successful verify.</summary>
-    private static readonly TimeSpan TicketTtl = TimeSpan.FromMinutes(10);
-
-    // ── Request ──────────────────────────────────────────────────────────────
 
     /// <inheritdoc/>
     public async Task<PasswordResetRequestResult> RequestAsync(string email)
@@ -45,7 +33,7 @@ public class PasswordResetService(
 
             await using var transaction = await unitOfWork.BeginTransactionAsync();
 
-            await codes.AddAsync(user.Id, codeHash, DateTime.UtcNow.Add(CodeTtl));
+            await codes.AddAsync(user.Id, codeHash, DateTime.UtcNow.Add(AuthLifetimes.ResetPasswordCodeLifetime));
 
             // Publish the event with the raw code so Notification.Api can embed
             // it in the email. Auth.Api only stores the hash.
@@ -64,8 +52,6 @@ public class PasswordResetService(
         return PasswordResetRequestResult.Success();
     }
 
-    // ── Verify ────────────────────────────────────────────────────────────────
-
     /// <inheritdoc/>
     public async Task<PasswordResetVerifyResult> VerifyAsync(string email, string code)
     {
@@ -77,7 +63,7 @@ public class PasswordResetService(
         if (stored is null || stored.ExpiresAt <= DateTime.UtcNow)
             return PasswordResetVerifyResult.CodeNotFound();
 
-        if (stored.Attempts >= MaxAttempts)
+        if (stored.Attempts >= AuthAttempts.MaxResetPasswordAttempts)
             return PasswordResetVerifyResult.TooManyAttempts();
 
         var submittedHash = tokenService.HashOtpCode(code);
@@ -94,7 +80,7 @@ public class PasswordResetService(
             await failTx.CommitAsync();
 
             // Re-read attempt count to return the most accurate status
-            return stored.Attempts + 1 >= MaxAttempts
+            return stored.Attempts + 1 >= AuthAttempts.MaxResetPasswordAttempts
                 ? PasswordResetVerifyResult.TooManyAttempts()
                 : PasswordResetVerifyResult.CodeInvalid();
         }
@@ -105,14 +91,12 @@ public class PasswordResetService(
 
         await using var successTx = await unitOfWork.BeginTransactionAsync();
         await codes.MarkUsedAsync(stored.Id);
-        await tickets.AddAsync(user.Id, ticketHash, DateTime.UtcNow.Add(TicketTtl));
+        await tickets.AddAsync(user.Id, ticketHash, DateTime.UtcNow.Add(AuthLifetimes.ResetPasswordTicketLifetime));
         await unitOfWork.SaveChangesAsync();
         await successTx.CommitAsync();
 
         return PasswordResetVerifyResult.Success(rawTicket);
     }
-
-    // ── Confirm ───────────────────────────────────────────────────────────────
 
     /// <inheritdoc/>
     public async Task<PasswordResetConfirmResult> ConfirmAsync(string rawResetTicket, string newPassword)
@@ -126,7 +110,7 @@ public class PasswordResetService(
         // Set the new password via Identity (validates rules).
         var errors = await users.SetPasswordAsync(ticket.UserId, newPassword);
         var enumerable = errors as string[] ?? [.. errors];
-        if (enumerable.Any())
+        if (enumerable.Length != 0)
             return PasswordResetConfirmResult.PasswordValidationFailed(enumerable);
 
         // Invalidate the ticket and every existing refresh token in one transaction

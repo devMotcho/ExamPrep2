@@ -37,11 +37,6 @@ public class AuthDbContext(DbContextOptions<AuthDbContext> options)
             .HasForeignKey(t => t.UserId)
             .OnDelete(DeleteBehavior.Cascade);
 
-        builder.Entity<User>()
-            .HasMany(u => u.EmailVerificationCodes)
-            .WithOne(c => c.User)
-            .HasForeignKey(c => c.UserId)
-            .OnDelete(DeleteBehavior.Cascade);
 
         builder.Entity<User>()
             .HasMany(u => u.PendingOAuthLinks)
@@ -51,6 +46,10 @@ public class AuthDbContext(DbContextOptions<AuthDbContext> options)
 
         builder.Entity<RefreshToken>()
             .HasIndex(rt => rt.TokenHash)
+            .IsUnique();
+
+        builder.Entity<EmailVerificationCode>()
+            .HasIndex(e => e.Email)
             .IsUnique();
 
         builder.Entity<PasswordResetTicket>()

@@ -54,8 +54,6 @@ public class JwtTokenService(RsaKeyProvider keys, IConfiguration config) : IToke
         }
     }
 
-    // ── Password Reset ────────────────────────────────────────────────────────
-
     public string GenerateOtpCode()
     {
         // Use a random uint, take modulo 100_000_000 to get 0–99_999_999,

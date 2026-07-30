@@ -1,9 +1,10 @@
 namespace Auth.Application.Results;
 
-// ── Request ──────────────────────────────────────────────────────────────────
 
+/// <summary>Represents the status of a password reset request.</summary>
 public enum PasswordResetRequestStatus { Success }
 
+/// <summary>Encapsulates the result of requesting a password reset code.</summary>
 public class PasswordResetRequestResult
 {
     public PasswordResetRequestStatus Status { get; private init; }
@@ -19,8 +20,8 @@ public class PasswordResetRequestResult
     };
 }
 
-// ── Verify ────────────────────────────────────────────────────────────────────
 
+/// <summary>Represents the status of a password reset OTP verification.</summary>
 public enum PasswordResetVerifyStatus
 {
     Success,
@@ -32,6 +33,7 @@ public enum PasswordResetVerifyStatus
     TooManyAttempts
 }
 
+/// <summary>Encapsulates the result of verifying a password reset OTP.</summary>
 public class PasswordResetVerifyResult
 {
     public PasswordResetVerifyStatus Status { get; private init; }
@@ -64,8 +66,7 @@ public class PasswordResetVerifyResult
     };
 }
 
-// ── Confirm ───────────────────────────────────────────────────────────────────
-
+/// <summary>Represents the status of confirming a new password using a reset ticket.</summary>
 public enum PasswordResetConfirmStatus
 {
     Success,
@@ -75,6 +76,7 @@ public enum PasswordResetConfirmStatus
     PasswordValidationFailed
 }
 
+/// <summary>Encapsulates the result of confirming a new password.</summary>
 public class PasswordResetConfirmResult
 {
     public PasswordResetConfirmStatus Status { get; private init; }

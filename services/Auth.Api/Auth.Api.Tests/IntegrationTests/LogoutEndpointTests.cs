@@ -9,25 +9,28 @@ namespace Auth.Api.Tests.IntegrationTests;
 public class LogoutEndpointTests : IClassFixture<AuthApiWebApplicationFactory>
 {
     private readonly HttpClient _client;
+    private readonly AuthApiWebApplicationFactory _factory;
 
     public LogoutEndpointTests(AuthApiWebApplicationFactory factory)
     {
+        _factory = factory;
         _client = factory.CreateClient(new() { AllowAutoRedirect = false });
     }
 
     // ── helpers ──────────────────────────────────────────────────────────────
 
-    /// <summary>Registers a new unique user and returns their access token + raw refresh token.</summary>
+    /// <summary>Registers a new unique user, verifies their email, logs them in, and returns their access token + raw refresh token.</summary>
     private async Task<(string AccessToken, string RefreshToken)> RegisterAndGetTokensAsync()
     {
         var email = $"{Guid.NewGuid()}@example.com";
-        var response = await _client.PostAsJsonAsync("/api/auth/register",
-            new RegisterRequest(email, "StrongPass123!"));
+        var password = "StrongPass123!";
+        await _factory.CreateUserAsync(email, password);
 
-        response.EnsureSuccessStatusCode();
+        var loginResponse = await _client.PostAsJsonAsync("/api/auth/login", new LoginRequest(email, password));
+        loginResponse.EnsureSuccessStatusCode();
 
-        var body = await response.Content.ReadFromJsonAsync<AuthResponse>();
-        var refreshToken = ExtractCookieValue(response, "refresh_token")!;
+        var body = await loginResponse.Content.ReadFromJsonAsync<AuthResponse>();
+        var refreshToken = ExtractCookieValue(loginResponse, "refresh_token")!;
         return (body!.AccessToken, refreshToken);
     }
 

@@ -8,8 +8,7 @@ namespace Auth.Api.Extensions;
 public static class AuthenticationExtensions
 {
     public static IServiceCollection AddJwtAuthentication(
-        this IServiceCollection services,
-        IConfiguration configuration)
+        this IServiceCollection services)
     {
         // Register concrete RsaKeyProvider and expose it as IJwksProvider.
         // Single instance so key material is loaded once at startup.

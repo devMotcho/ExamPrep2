@@ -26,8 +26,7 @@ public class PasswordResetEndpointTests : IClassFixture<AuthApiWebApplicationFac
     private async Task<string> RegisterUserAsync()
     {
         var email = $"{Guid.NewGuid()}@example.com";
-        var response = await _client.PostAsJsonAsync("/api/auth/register", new RegisterRequest(email, "OldPassword123!"));
-        response.EnsureSuccessStatusCode();
+        await _factory.CreateUserAsync(email, "OldPassword123!");
         return email;
     }
 

@@ -1,12 +1,16 @@
 namespace Auth.Application.Results;
 
-public enum RegisterStatus
-{
-    Success,
-    EmailAlreadyRegistered,
-    ValidationFailed
+/// <summary>Represents the possible outcomes of a user registration attempt.</summary>
+public enum RegisterStatus 
+{ 
+    Success, 
+    EmailAlreadyRegistered, 
+    ValidationFailed, 
+    InvalidOrExpiredCode, 
+    TooManyAttempts 
 }
 
+/// <summary>Encapsulates the result of a user registration operation.</summary>
 public class RegisterResult
 {
     public RegisterStatus Status { get; private init; }
@@ -31,4 +35,7 @@ public class RegisterResult
         Status = RegisterStatus.ValidationFailed,
         Errors = errors
     };
+
+    public static RegisterResult InvalidOrExpiredCode() => new() { Status = RegisterStatus.InvalidOrExpiredCode };
+    public static RegisterResult TooManyAttempts() => new() { Status = RegisterStatus.TooManyAttempts };
 }

@@ -1,5 +1,6 @@
 namespace Auth.Application.Results;
 
+/// <summary>Represents the possible outcomes of a logout attempt.</summary>
 public enum LogoutStatus
 {
     Success,
@@ -9,6 +10,7 @@ public enum LogoutStatus
     TokenNotRecognised
 }
 
+/// <summary>Encapsulates the result of a logout operation.</summary>
 public class LogoutResult
 {
     public LogoutStatus Status { get; private init; }

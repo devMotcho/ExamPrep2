@@ -2,8 +2,10 @@ namespace Auth.Application.Results;
 
 // ── Request ──────────────────────────────────────────────────────────────────
 
+/// <summary>Represents the status of an email verification request.</summary>
 public enum EmailVerificationRequestStatus { Success, AlreadyVerified }
 
+/// <summary>Encapsulates the result of requesting an email verification code.</summary>
 public class EmailVerificationRequestResult
 {
     public EmailVerificationRequestStatus Status { get; private init; }
@@ -19,6 +21,7 @@ public class EmailVerificationRequestResult
 
 // ── Verify ────────────────────────────────────────────────────────────────────
 
+/// <summary>Represents the status of an email verification check.</summary>
 public enum EmailVerificationVerifyStatus
 {
     Success,
@@ -32,6 +35,7 @@ public enum EmailVerificationVerifyStatus
     AlreadyVerified
 }
 
+/// <summary>Encapsulates the result of verifying an email code.</summary>
 public class EmailVerificationVerifyResult
 {
     public EmailVerificationVerifyStatus Status { get; private init; }
