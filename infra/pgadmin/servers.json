@@ -1,0 +1,14 @@
+{
+  "Servers": {
+    "1": {
+      "Name": "AuthDB",
+      "Group": "ExamPrep",
+      "Host": "postgres",
+      "Port": 5432,
+      "MaintenanceDB": "authdb",
+      "Username": "app",
+      "PassFile": "/pgpass/pgpass",
+      "SSLMode": "prefer"
+    }
+  }
+}

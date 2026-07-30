@@ -8,9 +8,11 @@ namespace Auth.Api.Tests.IntegrationTests;
 public class RefreshEndpointTests : IClassFixture<AuthApiWebApplicationFactory>
 {
     private readonly HttpClient _client;
+    private readonly AuthApiWebApplicationFactory _factory;
 
     public RefreshEndpointTests(AuthApiWebApplicationFactory factory)
     {
+        _factory = factory;
         // UseCookies = true so the HttpClient automatically stores and resends the
         // Set-Cookie header from /register when calling /refresh.
         _client = factory.CreateClient(new() { AllowAutoRedirect = false });
@@ -36,9 +38,10 @@ public class RefreshEndpointTests : IClassFixture<AuthApiWebApplicationFactory>
     public async Task Refresh_ValidCookie_ReturnsOkWithNewAccessToken()
     {
         var email = $"{Guid.NewGuid()}@example.com";
-        var registerResponse = await _client.PostAsJsonAsync("/api/auth/register",
-            new RegisterRequest(email, "StrongPass123!"));
-        var rawToken = ExtractCookieValue(registerResponse, "refresh_token");
+        await _factory.CreateUserAsync(email, "StrongPass123!");
+        
+        var loginResponse = await _client.PostAsJsonAsync("/api/auth/login", new LoginRequest(email, "StrongPass123!"));
+        var rawToken = ExtractCookieValue(loginResponse, "refresh_token");
 
         var request = new HttpRequestMessage(HttpMethod.Post, "/api/auth/refresh");
         request.Headers.Add("Cookie", $"refresh_token={rawToken}");
@@ -54,9 +57,10 @@ public class RefreshEndpointTests : IClassFixture<AuthApiWebApplicationFactory>
     public async Task Refresh_ValidCookie_RotatesRefreshToken()
     {
         var email = $"{Guid.NewGuid()}@example.com";
-        var registerResponse = await _client.PostAsJsonAsync("/api/auth/register",
-            new RegisterRequest(email, "StrongPass123!"));
-        var originalToken = ExtractCookieValue(registerResponse, "refresh_token");
+        await _factory.CreateUserAsync(email, "StrongPass123!");
+        
+        var loginResponse = await _client.PostAsJsonAsync("/api/auth/login", new LoginRequest(email, "StrongPass123!"));
+        var originalToken = ExtractCookieValue(loginResponse, "refresh_token");
 
         var request = new HttpRequestMessage(HttpMethod.Post, "/api/auth/refresh");
         request.Headers.Add("Cookie", $"refresh_token={originalToken}");
@@ -73,9 +77,10 @@ public class RefreshEndpointTests : IClassFixture<AuthApiWebApplicationFactory>
     public async Task Refresh_ConsumedToken_ReturnsUnauthorized()
     {
         var email = $"{Guid.NewGuid()}@example.com";
-        var registerResponse = await _client.PostAsJsonAsync("/api/auth/register",
-            new RegisterRequest(email, "StrongPass123!"));
-        var originalToken = ExtractCookieValue(registerResponse, "refresh_token");
+        await _factory.CreateUserAsync(email, "StrongPass123!");
+        
+        var loginResponse = await _client.PostAsJsonAsync("/api/auth/login", new LoginRequest(email, "StrongPass123!"));
+        var originalToken = ExtractCookieValue(loginResponse, "refresh_token");
 
         // First use — should succeed and rotate
         var first = new HttpRequestMessage(HttpMethod.Post, "/api/auth/refresh");

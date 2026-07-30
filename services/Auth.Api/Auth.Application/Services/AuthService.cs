@@ -1,7 +1,9 @@
 using System.Text.Json;
+
 using Auth.Application.Events;
 using Auth.Application.Interfaces;
 using Auth.Application.Results;
+using Auth.Domain.Rules;
 
 namespace Auth.Application.Services;
 
@@ -10,17 +12,57 @@ public class AuthService(
     IRefreshTokenRepository refreshTokens,
     IOutboxRepository outbox,
     IUnitOfWork unitOfWork,
-    ITokenService tokens) : IAuthService
+    ITokenService tokens,
+    IEmailVerificationCodeRepository verificationCodes) : IAuthService
 {
-    public async Task<RegisterResult> RegisterAsync(string email, string password)
+
+    /// <inheritdoc/>
+    public async Task RequestEmailVerificationAsync(string email)
     {
-        var existing = await users.FindByEmailAsync(email);
-        if (existing is not null)
+        var existingUser = await users.FindByEmailAsync(email);
+        if (existingUser is not null) return; // silent no-op - don't leak that the account already exists
+
+        var rawCode = tokens.GenerateOtpCode();
+        var codeHash = tokens.HashOtpCode(rawCode);
+
+        await verificationCodes.UpsertAsync(email, codeHash, DateTime.UtcNow.Add(AuthLifetimes.EmailVerificationCodeLifetime));
+
+        await outbox.AddAsync(
+            topic: "email-verification-code-requested",
+            key: email,
+            payload: JsonSerializer.Serialize(new EmailVerificationCodeRequestedEvent(email, rawCode)));
+
+        await unitOfWork.SaveChangesAsync();
+    }
+
+    /// <inheritdoc/>
+    public async Task<RegisterResult> RegisterAsync(string email, string code, string password)
+    {
+        var existingUser = await users.FindByEmailAsync(email);
+        if (existingUser is not null)
             return RegisterResult.EmailAlreadyRegistered();
+
+        var storedCode = await verificationCodes.FindActiveByEmailAsync(email);
+        if (storedCode is null || storedCode.ExpiresAt < DateTime.UtcNow)
+            return RegisterResult.InvalidOrExpiredCode();
+
+        if (storedCode.Attempts >= AuthLifetimes.MaxCodeAttempts)
+            return RegisterResult.TooManyAttempts();
+
+        if (tokens.HashOtpCode(code) != storedCode.CodeHash)
+        {
+            await verificationCodes.IncrementAttemptsAsync(storedCode.Id);
+            await unitOfWork.SaveChangesAsync();
+            return RegisterResult.InvalidOrExpiredCode();
+        }
+
+        var passwordCheck = await users.ValidatePasswordAsync(password);
+        if (!passwordCheck.Succeeded)
+            return RegisterResult.ValidationFailed(passwordCheck.Errors);
 
         await using var transaction = await unitOfWork.BeginTransactionAsync();
 
-        var createResult = await users.CreateAsync(email, password);
+        var createResult = await users.CreateAsync(email, password, emailConfirmed: true);
         if (!createResult.Succeeded)
         {
             await transaction.RollbackAsync();
@@ -28,6 +70,8 @@ public class AuthService(
         }
 
         var user = createResult.User!;
+
+        await verificationCodes.MarkUsedAsync(storedCode.Id);
 
         var (rawRefreshToken, refreshTokenHash) = tokens.GenerateRefreshToken();
         await refreshTokens.AddAsync(user.Id, refreshTokenHash, DateTime.UtcNow.AddDays(30));
@@ -44,6 +88,7 @@ public class AuthService(
         return RegisterResult.Success(accessToken, rawRefreshToken);
     }
 
+    /// <inheritdoc/>
     public async Task<RefreshResult> RefreshAsync(string rawRefreshToken)
     {
         var tokenHash = tokens.HashRefreshToken(rawRefreshToken);
@@ -76,15 +121,29 @@ public class AuthService(
         return RefreshResult.Success(accessToken, newRawToken);
     }
 
+    /// <inheritdoc/>
     public async Task<LoginResult> LoginAsync(string emailOrUsername, string password)
     {
         var user = await users.FindByEmailOrUsernameAsync(emailOrUsername);
         if (user is null)
             return LoginResult.InvalidCredentials();
 
+        if (await users.IsLockedOutAsync(user.Id))
+            return LoginResult.TooManyAttempts();
+
         var passwordValid = await users.CheckPasswordAsync(user.Id, password);
         if (!passwordValid)
+        {
+            await users.AccessFailedAsync(user.Id);
+            if (await users.IsLockedOutAsync(user.Id))
+                return LoginResult.TooManyAttempts();
             return LoginResult.InvalidCredentials();
+        }
+
+        await users.ResetAccessFailedCountAsync(user.Id);
+
+        if (!await users.IsEmailConfirmedAsync(user.Id))
+            return LoginResult.EmailNotVerified();
 
         await using var transaction = await unitOfWork.BeginTransactionAsync();
 
@@ -97,4 +156,27 @@ public class AuthService(
         var accessToken = tokens.GenerateAccessToken(user);
         return LoginResult.Success(accessToken, rawRefreshToken);
     }
+
+    /// <inheritdoc/>
+    public async Task<LogoutResult> LogoutAsync(string rawRefreshToken)
+    {
+        // Hash first — an invalid Base64 value can never match a stored hash.
+        var tokenHash = tokens.HashRefreshToken(rawRefreshToken);
+        if (tokenHash is null)
+            return LogoutResult.TokenNotFound();
+
+        var stored = await refreshTokens.FindByHashAsync(tokenHash);
+        if (stored is null)
+            return LogoutResult.TokenNotRecognised();
+
+        // Revoke and persist in a transaction — if the save fails the token
+        // remains valid, which is safer than silently swallowing the error.
+        await using var transaction = await unitOfWork.BeginTransactionAsync();
+        await refreshTokens.RevokeAsync(stored.Id);
+        await unitOfWork.SaveChangesAsync();
+        await transaction.CommitAsync();
+
+        return LogoutResult.Success();
+    }
 }
+

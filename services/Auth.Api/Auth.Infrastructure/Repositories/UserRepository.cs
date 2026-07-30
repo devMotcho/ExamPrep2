@@ -13,19 +13,25 @@ public class UserRepository(UserManager<User> userManager) : IUserRepository
         return user is null ? null : Map(user);
     }
 
-    public async Task<CreateUserResult> CreateAsync(string email, string password)
+    public async Task<CreateUserResult> CreateAsync(string email, string password, bool emailConfirmed = false)
     {
-        var user = new User { UserName = email, Email = email };
-        var result = await userManager.CreateAsync(user, password);
+        var user = new User
+        {
+            UserName = email,
+            Email = email,
+            EmailConfirmed = emailConfirmed
+        };
 
-        return result.Succeeded
-            ? CreateUserResult.Success(Map(user))
-            : CreateUserResult.Failure(result.Errors.Select(e => e.Description));
+        var result = await userManager.CreateAsync(user, password);
+        if (!result.Succeeded)
+            return CreateUserResult.Failure(result.Errors.Select(e => e.Description));
+
+        return CreateUserResult.Success(Map(user));
     }
 
     public async Task<CreateUserResult> CreateWithoutPasswordAsync(string email)
     {
-        var user = new User { UserName = email, Email = email, EmailConfirmed = true };
+        var user = new User { UserName = email, Email = email, EmailConfirmed = true, LockoutEnabled = true };
         var result = await userManager.CreateAsync(user); // No password
 
         return result.Succeeded
@@ -51,7 +57,104 @@ public class UserRepository(UserManager<User> userManager) : IUserRepository
     public async Task<bool> CheckPasswordAsync(string userId, string password)
     {
         var user = await userManager.FindByIdAsync(userId);
-        return user is not null && await userManager.CheckPasswordAsync(user, password);
+        return user != null && await userManager.CheckPasswordAsync(user, password);
+    }
+
+    public async Task<(bool Succeeded, IEnumerable<string> Errors)> ValidatePasswordAsync(string password)
+    {
+        var validators = userManager.PasswordValidators;
+        var errors = new List<string>();
+        foreach (var validator in validators)
+        {
+            var result = await validator.ValidateAsync(userManager, null!, password);
+            if (!result.Succeeded)
+                errors.AddRange(result.Errors.Select(e => e.Description));
+        }
+        return (errors.Count == 0, errors);
+    }
+
+    /// <inheritdoc/>
+    public async Task<IEnumerable<string>> SetPasswordAsync(string userId, string newPassword)
+    {
+        var user = await userManager.FindByIdAsync(userId);
+        if (user is null)
+            return ["User not found."];
+
+        // UserManager requires us to remove the old password before adding a new one
+        // if we are not verifying the old password (which we aren't, this is a reset).
+        if (await userManager.HasPasswordAsync(user))
+        {
+            var removeResult = await userManager.RemovePasswordAsync(user);
+            if (!removeResult.Succeeded)
+                return removeResult.Errors.Select(e => e.Description);
+        }
+
+        var addResult = await userManager.AddPasswordAsync(user, newPassword);
+        return addResult.Succeeded
+            ? []
+            : addResult.Errors.Select(e => e.Description);
+    }
+
+    /// <inheritdoc/>
+    public async Task<bool> IsEmailConfirmedAsync(string userId)
+    {
+        var user = await userManager.FindByIdAsync(userId);
+        return user is not null && await userManager.IsEmailConfirmedAsync(user);
+    }
+
+    /// <inheritdoc/>
+    public async Task<bool> ConfirmEmailAsync(string userId)
+    {
+        var user = await userManager.FindByIdAsync(userId);
+        if (user is null) return false;
+
+        var token = await userManager.GenerateEmailConfirmationTokenAsync(user);
+        var result = await userManager.ConfirmEmailAsync(user, token);
+        return result.Succeeded;
+    }
+
+    /// <inheritdoc/>
+    public async Task<AppUser?> FindByLoginAsync(string provider, string providerKey)
+    {
+        var user = await userManager.FindByLoginAsync(provider, providerKey);
+        return user is null ? null : Map(user);
+    }
+
+    /// <inheritdoc/>
+    public async Task AddLoginAsync(string userId, string provider, string providerKey)
+    {
+        var user = await userManager.FindByIdAsync(userId);
+        if (user is not null)
+        {
+            await userManager.AddLoginAsync(user, new UserLoginInfo(provider, providerKey, provider));
+        }
+    }
+
+    /// <inheritdoc/>
+    public async Task<bool> IsLockedOutAsync(string userId)
+    {
+        var user = await userManager.FindByIdAsync(userId);
+        return user is not null && await userManager.IsLockedOutAsync(user);
+    }
+
+    /// <inheritdoc/>
+    public async Task AccessFailedAsync(string userId)
+    {
+        var user = await userManager.FindByIdAsync(userId);
+        if (user is not null)
+        {
+            await userManager.AccessFailedAsync(user);
+        }
+    }
+
+    /// <inheritdoc/>
+    public async Task ResetAccessFailedCountAsync(string userId)
+    {
+        var user = await userManager.FindByIdAsync(userId);
+        if (user is not null)
+        {
+            await userManager.ResetAccessFailedCountAsync(user);
+        }
     }
 
     private static AppUser Map(User user) => new(user.Id, user.Email!, user.CreatedAt);

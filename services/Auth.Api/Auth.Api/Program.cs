@@ -7,7 +7,7 @@ var builder = WebApplication.CreateBuilder(args);
 builder.Services
     .AddPersistence(builder.Configuration)
     .AddIdentityConfig()
-    .AddJwtAuthentication(builder.Configuration)
+    .AddJwtAuthentication()
     .AddApplicationServices();
 
 builder.Services.AddAuthorization();

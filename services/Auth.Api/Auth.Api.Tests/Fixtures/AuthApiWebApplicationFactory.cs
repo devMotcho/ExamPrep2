@@ -1,9 +1,11 @@
+using Auth.Infrastructure.Identity;
 using Auth.Infrastructure.Persistence;
 using Microsoft.AspNetCore.Hosting;
+using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc.Testing;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
-using Microsoft.VisualStudio.TestPlatform.TestHost;
+using Microsoft.Extensions.DependencyInjection;
 using Testcontainers.PostgreSql;
 
 namespace Auth.Api.Tests.Fixtures;
@@ -53,5 +55,25 @@ public class AuthApiWebApplicationFactory : WebApplicationFactory<Program>, IAsy
                 ["Jwt:PublicKeyPath"] = _publicKeyPath
             });
         });
+    }
+
+    public async Task ManuallyVerifyEmailAsync(string email)
+    {
+        using var scope = Services.CreateScope();
+        var userManager = scope.ServiceProvider.GetRequiredService<UserManager<User>>();
+        var user = await userManager.FindByEmailAsync(email);
+        if (user != null)
+        {
+            var token = await userManager.GenerateEmailConfirmationTokenAsync(user);
+            await userManager.ConfirmEmailAsync(user, token);
+        }
+    }
+
+    public async Task CreateUserAsync(string email, string password)
+    {
+        using var scope = Services.CreateScope();
+        var userManager = scope.ServiceProvider.GetRequiredService<UserManager<User>>();
+        var user = new User { UserName = email, Email = email, EmailConfirmed = true };
+        await userManager.CreateAsync(user, password);
     }
 }

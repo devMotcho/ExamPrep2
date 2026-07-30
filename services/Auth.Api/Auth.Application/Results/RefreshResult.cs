@@ -1,5 +1,6 @@
 namespace Auth.Application.Results;
 
+/// <summary>Represents the possible outcomes of a token refresh attempt.</summary>
 public enum RefreshStatus
 {
     Success,
@@ -7,6 +8,7 @@ public enum RefreshStatus
     TokenExpiredOrRevoked
 }
 
+/// <summary>Encapsulates the result of a token refresh operation.</summary>
 public class RefreshResult
 {
     public RefreshStatus Status { get; private init; }
