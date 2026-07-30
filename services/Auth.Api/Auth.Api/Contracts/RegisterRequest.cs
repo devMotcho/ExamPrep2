@@ -1,4 +1,5 @@
 using System.ComponentModel.DataAnnotations;
+using Auth.Domain.Rules;
 
 namespace Auth.Api.Contracts;
 
@@ -7,4 +8,4 @@ public record RequestEmailVerificationRequest([Required, EmailAddress] string Em
 public record RegisterRequest(
     [Required, EmailAddress] string Email,
     [Required] string Code,
-    [Required, MinLength(Auth.Domain.Rules.PasswordRules.MinimumLength)] string Password);
+    [Required, MinLength(PasswordRules.MinimumLength)] string Password);

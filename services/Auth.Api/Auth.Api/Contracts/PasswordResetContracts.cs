@@ -1,4 +1,5 @@
 using System.ComponentModel.DataAnnotations;
+using Auth.Domain.Rules;
 
 namespace Auth.Api.Contracts;
 
@@ -8,7 +9,7 @@ public record PasswordResetRequestRequest(
 
 public record PasswordResetVerifyRequest(
     [Required, EmailAddress] string Email,
-    [Required, StringLength(Auth.Domain.Rules.OtpRules.CodeLength, MinimumLength = Auth.Domain.Rules.OtpRules.CodeLength)] string Code
+    [Required, StringLength(OtpRules.CodeLength, MinimumLength = OtpRules.CodeLength)] string Code
 );
 
 public record PasswordResetConfirmRequest(
