@@ -18,42 +18,6 @@ public class AuthDbContext(DbContextOptions<AuthDbContext> options)
     protected override void OnModelCreating(ModelBuilder builder)
     {
         base.OnModelCreating(builder);
-
-        builder.Entity<User>()
-            .HasMany(u => u.RefreshTokens)
-            .WithOne(rt => rt.User)
-            .HasForeignKey(rt => rt.UserId)
-            .OnDelete(DeleteBehavior.Cascade);
-
-        builder.Entity<User>()
-            .HasMany(u => u.PasswordResetCodes)
-            .WithOne(c => c.User)
-            .HasForeignKey(c => c.UserId)
-            .OnDelete(DeleteBehavior.Cascade);
-
-        builder.Entity<User>()
-            .HasMany(u => u.PasswordResetTickets)
-            .WithOne(t => t.User)
-            .HasForeignKey(t => t.UserId)
-            .OnDelete(DeleteBehavior.Cascade);
-
-
-        builder.Entity<User>()
-            .HasMany(u => u.PendingOAuthLinks)
-            .WithOne(p => p.User)
-            .HasForeignKey(p => p.UserId)
-            .OnDelete(DeleteBehavior.Cascade);
-
-        builder.Entity<RefreshToken>()
-            .HasIndex(rt => rt.TokenHash)
-            .IsUnique();
-
-        builder.Entity<EmailVerificationCode>()
-            .HasIndex(e => e.Email)
-            .IsUnique();
-
-        builder.Entity<PasswordResetTicket>()
-            .HasIndex(t => t.TicketHash)
-            .IsUnique();
+        builder.ApplyConfigurationsFromAssembly(typeof(AuthDbContext).Assembly);
     }
 }
