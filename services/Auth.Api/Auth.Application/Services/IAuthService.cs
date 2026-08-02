@@ -8,7 +8,9 @@ namespace Auth.Application.Services;
 /// </summary>
 public interface IAuthService
 {
-    Task RequestEmailVerificationAsync(string email);
+    Task<EmailVerificationRequestResult> RequestEmailVerificationAsync(string email);
+
+    Task<EmailVerificationVerifyResult> VerifyEmailAsync(string email, string code);
 
     /// <summary>
     /// Creates a new user account with the given credentials.

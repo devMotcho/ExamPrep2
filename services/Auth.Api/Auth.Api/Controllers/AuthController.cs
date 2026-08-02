@@ -25,8 +25,34 @@ public class AuthController(IAuthService authService, ICookieService cookieServi
     [ProducesResponseType(StatusCodes.Status200OK)]
     public async Task<IActionResult> RequestEmailVerification(RequestEmailVerificationRequest req)
     {
-        await authService.RequestEmailVerificationAsync(req.Email);
+        var result = await authService.RequestEmailVerificationAsync(req.Email);
+        
+        if (result.Status == EmailVerificationRequestStatus.AlreadyVerified)
+            return Ok(new { message = "Email is already verified." });
+
         return Ok(new { message = "If this email isn't already registered, a code has been sent." });
+    }
+
+    /// <summary>
+    /// Verifies a user's email address using an OTP.
+    /// </summary>
+    [HttpPost("email-verification/verify")]
+    [ProducesResponseType(StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status400BadRequest)]
+    [ProducesResponseType(StatusCodes.Status429TooManyRequests)]
+    public async Task<IActionResult> VerifyEmailVerification(VerifyEmailVerificationRequest req)
+    {
+        var result = await authService.VerifyEmailAsync(req.Email, req.Code);
+
+        return result.Status switch
+        {
+            EmailVerificationVerifyStatus.Success => Ok(new { message = "Email successfully verified." }),
+            EmailVerificationVerifyStatus.AlreadyVerified => Ok(new { message = "Email is already verified." }),
+            EmailVerificationVerifyStatus.CodeNotFound => BadRequest(new { message = "Invalid or expired code." }),
+            EmailVerificationVerifyStatus.CodeInvalid => BadRequest(new { message = "Invalid or expired code." }),
+            EmailVerificationVerifyStatus.TooManyAttempts => StatusCode(429, new { message = "Too many attempts. Request a new code." }),
+            _ => throw new InvalidOperationException()
+        };
     }
 
     /// <summary>

@@ -25,6 +25,8 @@ public static class ApplicationExtensions
         services.AddScoped<ICookieService, CookieService>();
         
         services.AddScoped<IOAuthService, OAuthService>();
+        services.AddScoped<IStudentProfileService, StudentProfileService>();
+        services.AddScoped<IAdminUserService, AdminUserService>();
         services.AddSingleton<IExternalAuthProvider, GoogleAuthProvider>();
         return services;
     }

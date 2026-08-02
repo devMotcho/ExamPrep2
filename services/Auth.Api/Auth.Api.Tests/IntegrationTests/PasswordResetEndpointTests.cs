@@ -21,7 +21,6 @@ public class PasswordResetEndpointTests : IClassFixture<AuthApiWebApplicationFac
         _client = factory.CreateClient(new() { AllowAutoRedirect = false });
     }
 
-    // ── Helpers ──────────────────────────────────────────────────────────────
 
     private async Task<string> RegisterUserAsync()
     {
@@ -51,7 +50,6 @@ public class PasswordResetEndpointTests : IClassFixture<AuthApiWebApplicationFac
         return payload?.Code;
     }
 
-    // ── Tests ─────────────────────────────────────────────────────────────────
 
     [Fact]
     public async Task RequestReset_ExistingUser_ReturnsOk_AndWritesOutboxEvent()

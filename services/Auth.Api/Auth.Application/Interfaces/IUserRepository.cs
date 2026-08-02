@@ -1,4 +1,5 @@
 using Auth.Application.Models;
+using Microsoft.AspNetCore.Identity;
 
 namespace Auth.Application.Interfaces;
 
@@ -38,4 +39,15 @@ public interface IUserRepository
 
     /// <summary>Resets the failed access attempt count.</summary>
     Task ResetAccessFailedCountAsync(string userId);
+
+    // Profile additions
+    Task<IdentityResult> UpdateProfileAsync(string userId, string? firstName, string? lastName, string? phoneNumber);
+    Task<IdentityResult> ChangePasswordAsync(string userId, string currentPassword, string newPassword);
+    Task<IdentityResult> DeactivateAsync(string userId);
+
+    // Admin additions
+    Task<(IReadOnlyList<AppUser> Users, int TotalCount)> SearchUsersAsync(string? searchTerm, int page, int pageSize);
+    Task AddToRoleAsync(string userId, string role);
+    Task RemoveFromRoleAsync(string userId, string role);
+    Task<int> CountUsersInRoleAsync(string role);
 }
