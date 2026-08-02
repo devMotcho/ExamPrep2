@@ -69,11 +69,26 @@ public class AuthApiWebApplicationFactory : WebApplicationFactory<Program>, IAsy
         }
     }
 
-    public async Task CreateUserAsync(string email, string password)
+    public async Task<User> CreateUserAsync(string email, string password, params string[] roles)
     {
         using var scope = Services.CreateScope();
         var userManager = scope.ServiceProvider.GetRequiredService<UserManager<User>>();
         var user = new User { UserName = email, Email = email, EmailConfirmed = true };
         await userManager.CreateAsync(user, password);
+        
+        foreach (var role in roles)
+        {
+            await userManager.AddToRoleAsync(user, role);
+        }
+        return user;
+    }
+
+    public async Task<User> CreateUnverifiedUserAsync(string email, string password)
+    {
+        using var scope = Services.CreateScope();
+        var userManager = scope.ServiceProvider.GetRequiredService<UserManager<User>>();
+        var user = new User { UserName = email, Email = email, EmailConfirmed = false };
+        await userManager.CreateAsync(user, password);
+        return user;
     }
 }

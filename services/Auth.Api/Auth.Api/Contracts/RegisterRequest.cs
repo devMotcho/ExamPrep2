@@ -7,5 +7,5 @@ public record RequestEmailVerificationRequest([Required, EmailAddress] string Em
 
 public record RegisterRequest(
     [Required, EmailAddress] string Email,
-    [Required] string Code,
+    [Required, StringLength(8, MinimumLength = 8, ErrorMessage = "Code must be exactly 8 characters.")] string Code,
     [Required, MinLength(PasswordRules.MinimumLength)] string Password);

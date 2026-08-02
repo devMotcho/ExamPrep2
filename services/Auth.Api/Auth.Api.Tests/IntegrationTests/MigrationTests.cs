@@ -32,6 +32,8 @@ public class MigrationTests : IAsyncLifetime
 
         Assert.Contains("OutboxMessages", tableNames);
         Assert.Contains("RefreshTokens", tableNames);
-        Assert.Contains("AspNetUsers", tableNames);
+        Assert.Contains("Users", tableNames);
+        Assert.Contains("Roles", tableNames);
+        Assert.Contains("UserRoles", tableNames);
     }
 }

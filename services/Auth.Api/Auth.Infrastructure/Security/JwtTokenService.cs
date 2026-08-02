@@ -17,12 +17,21 @@ public class JwtTokenService(RsaKeyProvider keys, IConfiguration config) : IToke
             new RsaSecurityKey(keys.PrivateKey) { KeyId = keys.KeyId },
             SecurityAlgorithms.RsaSha256);
 
-        var claims = new[]
+        var claims = new List<Claim>
         {
             new Claim(JwtRegisteredClaimNames.Sub, user.Id),
             new Claim(JwtRegisteredClaimNames.Email, user.Email),
             new Claim(JwtRegisteredClaimNames.Jti, Guid.NewGuid().ToString())
         };
+
+
+        if (user.Roles is not null)
+        {
+            foreach (var role in user.Roles)
+            {
+                claims.Add(new Claim(ClaimTypes.Role, role));
+            }
+        }
 
         var token = new JwtSecurityToken(
             issuer: config["Jwt:Issuer"],

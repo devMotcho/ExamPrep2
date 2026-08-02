@@ -17,10 +17,13 @@ public class AuthService(
 {
 
     /// <inheritdoc/>
-    public async Task RequestEmailVerificationAsync(string email)
+    public async Task<EmailVerificationRequestResult> RequestEmailVerificationAsync(string email)
     {
         var existingUser = await users.FindByEmailAsync(email);
-        if (existingUser is not null) return; // silent no-op - don't leak that the account already exists
+        if (existingUser is not null && await users.IsEmailConfirmedAsync(existingUser.Id))
+        {
+            return EmailVerificationRequestResult.AlreadyVerified();
+        }
 
         var rawCode = tokens.GenerateOtpCode();
         var codeHash = tokens.HashOtpCode(rawCode);
@@ -33,6 +36,48 @@ public class AuthService(
             payload: JsonSerializer.Serialize(new EmailVerificationCodeRequestedEvent(email, rawCode)));
 
         await unitOfWork.SaveChangesAsync();
+
+        return EmailVerificationRequestResult.Success();
+    }
+
+    /// <inheritdoc/>
+    public async Task<EmailVerificationVerifyResult> VerifyEmailAsync(string email, string code)
+    {
+        var user = await users.FindByEmailAsync(email);
+        if (user is null)
+            return EmailVerificationVerifyResult.CodeNotFound();
+
+        if (await users.IsEmailConfirmedAsync(user.Id))
+            return EmailVerificationVerifyResult.AlreadyVerified();
+
+        var storedCode = await verificationCodes.FindActiveByEmailAsync(email);
+        if (storedCode is null || storedCode.ExpiresAt < DateTime.UtcNow)
+            return EmailVerificationVerifyResult.CodeNotFound();
+
+        if (storedCode.Attempts >= AuthLifetimes.MaxCodeAttempts)
+            return EmailVerificationVerifyResult.TooManyAttempts();
+
+        if (tokens.HashOtpCode(code) != storedCode.CodeHash)
+        {
+            await verificationCodes.IncrementAttemptsAsync(storedCode.Id);
+            await unitOfWork.SaveChangesAsync();
+            return EmailVerificationVerifyResult.CodeInvalid();
+        }
+
+        await using var transaction = await unitOfWork.BeginTransactionAsync();
+
+        var confirmResult = await users.ConfirmEmailAsync(user.Id);
+        if (!confirmResult)
+        {
+            await transaction.RollbackAsync();
+            return EmailVerificationVerifyResult.CodeInvalid();
+        }
+
+        await verificationCodes.MarkUsedAsync(storedCode.Id);
+        await unitOfWork.SaveChangesAsync();
+        await transaction.CommitAsync();
+
+        return EmailVerificationVerifyResult.Success();
     }
 
     /// <inheritdoc/>

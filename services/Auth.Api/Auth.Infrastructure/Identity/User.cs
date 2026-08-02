@@ -10,6 +10,13 @@ public class User : IdentityUser
     /// <summary>The UTC timestamp when the user account was created.</summary>
     public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
 
+    public bool IsPremium { get; set; }
+    public DateTime? PremiumUntil { get; set; }
+
+    // self-service editable profile fields
+    public string? FirstName { get; set; }
+    public string? LastName { get; set; }
+
     /// <summary>Collection of active and revoked refresh tokens belonging to the user.</summary>
     public ICollection<RefreshToken> RefreshTokens { get; set; } = new List<RefreshToken>();
     

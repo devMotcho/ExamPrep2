@@ -14,5 +14,5 @@ public record PasswordResetVerifyRequest(
 
 public record PasswordResetConfirmRequest(
     [Required] string ResetTicket,
-    [Required] string NewPassword
+    [Required, MinLength(PasswordRules.MinimumLength)] string NewPassword
 );

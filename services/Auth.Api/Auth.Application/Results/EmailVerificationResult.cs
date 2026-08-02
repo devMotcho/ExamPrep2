@@ -1,7 +1,5 @@
 namespace Auth.Application.Results;
 
-// ── Request ──────────────────────────────────────────────────────────────────
-
 /// <summary>Represents the status of an email verification request.</summary>
 public enum EmailVerificationRequestStatus { Success, AlreadyVerified }
 
@@ -15,11 +13,9 @@ public class EmailVerificationRequestResult
     /// However, if the user is already verified, it may optionally return AlreadyVerified.
     /// </summary>
     public static EmailVerificationRequestResult Success() => new() { Status = EmailVerificationRequestStatus.Success };
-    
+
     public static EmailVerificationRequestResult AlreadyVerified() => new() { Status = EmailVerificationRequestStatus.AlreadyVerified };
 }
-
-// ── Verify ────────────────────────────────────────────────────────────────────
 
 /// <summary>Represents the status of an email verification check.</summary>
 public enum EmailVerificationVerifyStatus
