@@ -18,6 +18,7 @@ public static class ApplicationExtensions
         services.AddScoped<IEmailVerificationCodeRepository, EmailVerificationCodeRepository>();
         services.AddScoped<IPendingOAuthLinkRepository, PendingOAuthLinkRepository>();
         services.AddScoped<IOutboxRepository, OutboxRepository>();
+        services.AddScoped<IPartnerRepository, PartnerRepository>();
         services.AddScoped<IUnitOfWork, UnitOfWork>();
         services.AddScoped<ITokenService, JwtTokenService>();
         services.AddScoped<IAuthService, AuthService>();
@@ -27,6 +28,7 @@ public static class ApplicationExtensions
         services.AddScoped<IOAuthService, OAuthService>();
         services.AddScoped<IStudentProfileService, StudentProfileService>();
         services.AddScoped<IAdminUserService, AdminUserService>();
+        services.AddScoped<IPartnerService, PartnerService>();
         services.AddSingleton<IExternalAuthProvider, GoogleAuthProvider>();
         return services;
     }

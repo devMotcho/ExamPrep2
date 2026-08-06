@@ -4,9 +4,10 @@ public static class Roles
 {
     public const string Student = "Student";
     public const string Promoter = "Promoter";
+    public const string Partner = "Partner";
     public const string Admin = "Admin";
 
-    public static readonly string[] All = [Student, Promoter, Admin];
+    public static readonly string[] All = [Student, Promoter, Partner, Admin];
 
     /// <summary>
     /// Roles that can never be removed from a user once assigned.

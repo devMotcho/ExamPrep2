@@ -80,8 +80,7 @@ public class AuthService(
         return EmailVerificationVerifyResult.Success();
     }
 
-    /// <inheritdoc/>
-    public async Task<RegisterResult> RegisterAsync(string email, string code, string password)
+    public async Task<RegisterResult> RegisterAsync(string email, string code, string password, string? partnerEmail = null)
     {
         var existingUser = await users.FindByEmailAsync(email);
         if (existingUser is not null)
@@ -105,9 +104,19 @@ public class AuthService(
         if (!passwordCheck.Succeeded)
             return RegisterResult.ValidationFailed(passwordCheck.Errors);
 
+        string? partnerId = null;
+        if (!string.IsNullOrEmpty(partnerEmail))
+        {
+            var partner = await users.FindByEmailAsync(partnerEmail);
+            if (partner is not null && partner.Roles.Contains(Roles.Partner))
+            {
+                partnerId = partner.Id;
+            }
+        }
+
         await using var transaction = await unitOfWork.BeginTransactionAsync();
 
-        var createResult = await users.CreateAsync(email, password, emailConfirmed: true);
+        var createResult = await users.CreateAsync(email, password, emailConfirmed: true, partnerId);
         if (!createResult.Succeeded)
         {
             await transaction.RollbackAsync();

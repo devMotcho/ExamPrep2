@@ -14,6 +14,7 @@ public class AuthDbContext(DbContextOptions<AuthDbContext> options)
     public DbSet<PasswordResetTicket> PasswordResetTickets => Set<PasswordResetTicket>();
     public DbSet<EmailVerificationCode> EmailVerificationCodes => Set<EmailVerificationCode>();
     public DbSet<PendingOAuthLink> PendingOAuthLinks => Set<PendingOAuthLink>();
+    public DbSet<PartnerTransaction> PartnerTransactions => Set<PartnerTransaction>();
 
     protected override void OnModelCreating(ModelBuilder builder)
     {

@@ -29,5 +29,14 @@ public class UserConfiguration : IEntityTypeConfiguration<User>
             .WithOne(p => p.User)
             .HasForeignKey(p => p.UserId)
             .OnDelete(DeleteBehavior.Cascade);
+
+        builder.Property(u => u.PartnerBalance)
+            .HasColumnType("decimal(18,2)")
+            .HasDefaultValue(0m);
+
+        builder.HasOne(u => u.ReferredByPartner)
+            .WithMany()
+            .HasForeignKey(u => u.ReferredByPartnerId)
+            .OnDelete(DeleteBehavior.SetNull);
     }
 }
