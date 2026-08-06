@@ -8,7 +8,7 @@ public interface IUserRepository
     Task<AppUser?> FindByEmailAsync(string email);
     Task<AppUser?> FindByIdAsync(string userId);
     Task<AppUser?> FindByEmailOrUsernameAsync(string emailOrUsername);
-    Task<CreateUserResult> CreateAsync(string email, string password, bool emailConfirmed = false);
+    Task<CreateUserResult> CreateAsync(string email, string password, bool emailConfirmed = false, string? partnerId = null);
     Task<CreateUserResult> CreateWithoutPasswordAsync(string email);
     Task<bool> CheckPasswordAsync(string userId, string password);
     Task<(bool Succeeded, IEnumerable<string> Errors)> ValidatePasswordAsync(string password);

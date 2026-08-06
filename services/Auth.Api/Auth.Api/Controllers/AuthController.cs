@@ -71,7 +71,7 @@ public class AuthController(IAuthService authService, ICookieService cookieServi
     [ProducesResponseType(StatusCodes.Status429TooManyRequests)]
     public async Task<IActionResult> Register(RegisterRequest req)
     {
-        var result = await authService.RegisterAsync(req.Email, req.Code, req.Password);
+        var result = await authService.RegisterAsync(req.Email, req.Code, req.Password, req.PartnerEmail);
 
         return result.Status switch
         {

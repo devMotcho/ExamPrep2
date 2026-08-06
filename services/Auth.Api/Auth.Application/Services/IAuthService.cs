@@ -18,11 +18,12 @@ public interface IAuthService
     /// <param name="email">The email address to register. Must be unique.</param>
     /// <param name="code">The verification code sent to the email.</param>
     /// <param name="password">The plain-text password; hashed before persistence.</param>
+    /// <param name="partnerEmail">Optional partner email linking the user for life.</param>
     /// <returns>
     /// <see cref="RegisterResult"/> indicating success, a duplicate-email conflict,
     /// or ASP.NET Identity validation failures.
     /// </returns>
-    Task<RegisterResult> RegisterAsync(string email, string code, string password);
+    Task<RegisterResult> RegisterAsync(string email, string code, string password, string? partnerEmail = null);
 
     /// <summary>
     /// Exchanges a valid refresh token for a new access token and a rotated

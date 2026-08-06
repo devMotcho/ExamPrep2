@@ -28,4 +28,10 @@ public class User : IdentityUser
     
     /// <summary>Collection of pending third-party OAuth links for the user.</summary>
     public ICollection<PendingOAuthLink> PendingOAuthLinks { get; set; } = new List<PendingOAuthLink>();
+
+    // Partner System fields
+    public string? ReferredByPartnerId { get; set; }
+    public User? ReferredByPartner { get; set; }
+    public decimal PartnerBalance { get; set; }
+    public ICollection<PartnerTransaction> PartnerTransactions { get; set; } = new List<PartnerTransaction>();
 }

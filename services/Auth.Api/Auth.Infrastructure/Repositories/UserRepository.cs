@@ -16,13 +16,14 @@ public class UserRepository(UserManager<User> userManager, AuthDbContext dbConte
         return user is null ? null : await MapAsync(user);
     }
 
-    public async Task<CreateUserResult> CreateAsync(string email, string password, bool emailConfirmed = false)
+    public async Task<CreateUserResult> CreateAsync(string email, string password, bool emailConfirmed = false, string? partnerId = null)
     {
         var user = new User
         {
             UserName = email,
             Email = email,
-            EmailConfirmed = emailConfirmed
+            EmailConfirmed = emailConfirmed,
+            ReferredByPartnerId = partnerId
         };
 
         var result = await userManager.CreateAsync(user, password);
