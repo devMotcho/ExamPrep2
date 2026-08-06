@@ -3,8 +3,11 @@ using Auth.Api.Contracts;
 using Auth.Api.Services;
 using Auth.Application.Results;
 using Auth.Application.Services;
+using Auth.Application.Interfaces;
+using Auth.Domain.Rules;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using System.IdentityModel.Tokens.Jwt;
 
 namespace Auth.Api.Controllers;
 
@@ -171,13 +174,19 @@ public class AuthController(IAuthService authService, ICookieService cookieServi
     [HttpPost("logout")]
     [ProducesResponseType(StatusCodes.Status204NoContent)]
     [ProducesResponseType(StatusCodes.Status401Unauthorized)]
-    public async Task<IActionResult> Logout()
+    public async Task<IActionResult> Logout([FromServices] IJwtBlocklistService blocklistService)
     {
         // Always expire the cookie on the response, regardless of outcome.
         // This ensures the browser clears its state even if the token was
         // already revoked or the cookie value was corrupted.
         cookieService.ExpireRefreshTokenCookie(Response);
 
+        // Revoke the active JWT access token (Stateless Blocklist)
+        var jti = User.Claims.FirstOrDefault(c => c.Type == JwtRegisteredClaimNames.Jti)?.Value;
+        if (!string.IsNullOrEmpty(jti))
+        {
+            await blocklistService.BlockTokenAsync(jti, AuthLifetimes.AccessTokenLifetime);
+        }
 
         var rawToken = Request.Cookies[CookieNames.RefreshToken];
         if (string.IsNullOrEmpty(rawToken))

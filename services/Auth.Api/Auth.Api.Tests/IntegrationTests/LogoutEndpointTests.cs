@@ -127,15 +127,16 @@ public class LogoutEndpointTests : IClassFixture<AuthApiWebApplicationFactory>
     }
 
     [Fact]
-    public async Task Logout_WithAlreadyRevokedToken_StillReturnsNoContent()
+    public async Task Logout_WithAlreadyRevokedToken_ReturnsUnauthorized()
     {
-        // Idempotency: calling logout twice with the same token must not error.
+        // Because we now have a Redis access token blocklist, the second call
+        // will be rejected at the Authentication middleware level.
         var (accessToken, refreshToken) = await RegisterAndGetTokensAsync();
 
         await _client.SendAsync(BuildLogoutRequest(accessToken, refreshToken));
 
-        // Second call — token is already revoked in DB, but response must still be 204
+        // Second call — access token is blocked, so middleware returns 401
         var secondResponse = await _client.SendAsync(BuildLogoutRequest(accessToken, refreshToken));
-        Assert.Equal(HttpStatusCode.NoContent, secondResponse.StatusCode);
+        Assert.Equal(HttpStatusCode.Unauthorized, secondResponse.StatusCode);
     }
 }

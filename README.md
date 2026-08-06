@@ -30,7 +30,8 @@ I built this platform utilizing a modern, scalable tech stack, heavily tailored 
 * API Testing & Documentation: Postman & Swagger (OpenAPI)
 * Backend Framework: .NET 9 (C#) using ASP.NET Core Web API
 * Database & ORM: PostgreSQL & Entity Framework Core (EF Core)
-* Identity & Security: ASP.NET Core Identity, JWT Bearer Auth, Custom OTP generation
+* Caching & Stateful Security: Redis (Distributed caching & JWT Blocklists)
+* Identity & Security: ASP.NET Core Identity, JWT Bearer Auth (JWKS), Custom OTP generation
 * Message Broker: Apache Kafka (for asynchronous microservice communication)
 * Containerization: Docker & Docker Compose
 * Testing: xUnit, Moq, Testcontainers (for real database integration testing)
@@ -58,7 +59,8 @@ As this is an ongoing rewrite using a Microservices architecture, the current fo
 
 ### Auth Service (`Auth.Api`)
 - Robust RBAC System: Full Role-Based Access Control (Student, Promoter, Admin, SuperAdmin).
-- Secure Registration & Login: JWT generation with embedded role claims.
+- Secure Registration & Login: JWT generation signed with Asymmetric RSA keys (JWKS) and embedded role claims.
+- Stateless Logout & Token Revocation: Redis-backed JWT blocklist instantly revokes access tokens system-wide without losing stateless authentication benefits.
 - Email Verification (OTP): Custom, database-backed OTP generation and verification for confirming new user accounts.
 - Profile Management: Self-service profile updates (names, phone numbers), secure password changes, and account deactivation.
 - Admin Dashboard APIs: Optimized endpoints (`ILike` PostgreSQL text searches, batched EF Core queries) to list, manage, and assign roles to users.
