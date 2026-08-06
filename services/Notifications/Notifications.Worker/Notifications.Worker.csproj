@@ -15,4 +15,9 @@
     <ProjectReference Include="..\Notifications.Application\Notifications.Application.csproj" />
     <ProjectReference Include="..\Notifications.Infrastructure\Notifications.Infrastructure.csproj" />
   </ItemGroup>
+    <ItemGroup>
+        <None Update="Templates\**\*.html">
+            <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+        </None>
+    </ItemGroup>
 </Project>

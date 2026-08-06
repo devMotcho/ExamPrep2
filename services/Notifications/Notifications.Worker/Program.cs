@@ -10,6 +10,7 @@ var host = Host.CreateDefaultBuilder(args)
     {
         // Application
         services.AddSingleton<INotificationDispatcher, NotificationDispatcher>();
+        services.AddSingleton<ITemplateService, Notifications.Infrastructure.Services.ScribanTemplateService>();
 
         // Infrastructure Providers
         services.AddSingleton<INotificationProvider, SmtpEmailProvider>();

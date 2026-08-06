@@ -17,15 +17,18 @@ public class KafkaConsumerBackgroundService : BackgroundService
     private readonly ILogger<KafkaConsumerBackgroundService> _logger;
     private readonly IConfiguration _config;
     private readonly INotificationDispatcher _dispatcher;
+    private readonly ITemplateService _templateService;
 
     public KafkaConsumerBackgroundService(
         ILogger<KafkaConsumerBackgroundService> logger,
         IConfiguration config,
-        INotificationDispatcher dispatcher)
+        INotificationDispatcher dispatcher,
+        ITemplateService templateService)
     {
         _logger = logger;
         _config = config;
         _dispatcher = dispatcher;
+        _templateService = templateService;
     }
 
     protected override async Task ExecuteAsync(CancellationToken stoppingToken)
@@ -124,7 +127,13 @@ public class KafkaConsumerBackgroundService : BackgroundService
                     var balance = root.GetProperty("NewBalance").GetDecimal();
 
                     var subject = $"Partner Balance Update: {type}";
-                    var body = $"<p>Your partner balance was updated.</p><p>Type: {type}</p><p>Amount: {amount}</p><p>Description: {desc}</p><p>New Balance: {balance}</p>";
+                    var body = await _templateService.RenderAsync("PartnerTransaction", new {
+                        type = type,
+                        amount = amount.ToString("0.00"),
+                        desc = desc,
+                        balance = balance.ToString("0.00"),
+                        year = DateTime.UtcNow.Year
+                    });
 
                     var notification = new NotificationMessage(recipient!, subject, body, NotificationType.Email);
                     await _dispatcher.DispatchAsync(notification, cancellationToken);
@@ -138,7 +147,10 @@ public class KafkaConsumerBackgroundService : BackgroundService
                     var code = codeProp.GetString();
 
                     var subject = "Your ExamPrep Verification Code";
-                    var body = $"<p>Welcome to ExamPrep!</p><p>Your verification code is: <strong>{code}</strong></p>";
+                    var body = await _templateService.RenderAsync("EmailVerification", new { 
+                        code = code, 
+                        year = DateTime.UtcNow.Year 
+                    });
 
                     var notification = new NotificationMessage(recipient!, subject, body, NotificationType.Email);
                     await _dispatcher.DispatchAsync(notification, cancellationToken);
@@ -152,7 +164,10 @@ public class KafkaConsumerBackgroundService : BackgroundService
                     var code = codeProp.GetString();
 
                     var subject = "Your ExamPrep Password Change Code";
-                    var body = $"<p>You requested to change your password.</p><p>Your verification code is: <strong>{code}</strong></p>";
+                    var body = await _templateService.RenderAsync("PasswordChange", new { 
+                        code = code, 
+                        year = DateTime.UtcNow.Year 
+                    });
 
                     var notification = new NotificationMessage(recipient!, subject, body, NotificationType.Email);
                     await _dispatcher.DispatchAsync(notification, cancellationToken);
