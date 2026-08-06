@@ -20,7 +20,7 @@ public class StudentController(IStudentProfileService profileService) : Controll
         var user = await profileService.GetProfileAsync(CurrentUserId);
         if (user is null) return NotFound();
 
-        return Ok(new ProfileResponse(user.Id, user.Email, user.FirstName, user.LastName, null)); // Add phone number if supported in AppUser later
+        return Ok(new ProfileResponse(user.Id, user.Email, user.FirstName, user.LastName, user.PhoneNumber));
     }
 
     [HttpPatch]

@@ -57,8 +57,9 @@ EscolhaMúltipla is a collaborative multiple-choice exam study tool built for st
 As this is an ongoing rewrite using a Microservices architecture, the current focus has been perfecting the Authentication & Identity Service (`Auth.Api`).
 
 ### Auth Service (`Auth.Api`)
-- Robust RBAC System: Full Role-Based Access Control (Student, Promoter, Admin, SuperAdmin).
-- Secure Registration & Login: JWT generation with embedded role claims.
+- Robust RBAC System: Full Role-Based Access Control (Student, Promoter, Partner, Admin, SuperAdmin).
+- Partner System: Advanced referral system allowing user linking at registration, integrated transactional ledgers for revenue sharing (balances and manual payouts), and Outbox Pattern notifications.
+- Secure Registration & Login: JWT generation signed with Asymmetric RSA keys (JWKS) and embedded role claims.
 - Email Verification (OTP): Custom, database-backed OTP generation and verification for confirming new user accounts.
 - Profile Management: Self-service profile updates (names, phone numbers), secure password changes, and account deactivation.
 - Admin Dashboard APIs: Optimized endpoints (`ILike` PostgreSQL text searches, batched EF Core queries) to list, manage, and assign roles to users.
@@ -82,7 +83,16 @@ The following features represent the core domain of the application and are sche
 
 ## Getting Started
 
-To run the local infrastructure (PostgreSQL, Kafka, etc.):
+### 1. Configure Secrets (.env)
+All sensitive configurations (Database strings, Google OAuth secrets, SMTP passwords) have been extracted from `appsettings.json` and moved into a secure `.env` file for Docker.
+To set up your local secrets:
+1. Navigate to the `infra/` folder.
+2. Copy the example file: `cp .env.example .env`
+3. Open the new `.env` file and fill in your actual secrets (e.g., Google App Password for emails, OAuth Client ID).
+*(Note: `*.env` is ignored by Git to prevent accidental credential leaks).*
+
+### 2. Run the Infrastructure
+To run the local infrastructure (PostgreSQL, Kafka, Notification Worker, etc.):
 
 ```bash
 cd infra
