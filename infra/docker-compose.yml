@@ -17,6 +17,19 @@ services:
       timeout: 5s
       retries: 5
 
+  redis:
+    image: redis:7
+    container_name: examprep-redis
+    ports:
+      - "6379:6379"
+    volumes:
+      - redisdata:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
   auth-api:
     build:
       context: ../services/Auth.Api
@@ -28,6 +41,7 @@ services:
       ASPNETCORE_ENVIRONMENT: Development
       ASPNETCORE_URLS: "http://+:8080"
       ConnectionStrings__AuthDb: "${AUTH_DB_CONNECTION_STRING:-Host=postgres;Port=5432;Database=authdb;Username=app;Password=app}"
+      ConnectionStrings__Redis: "redis:6379"
       Kafka__BootstrapServers: "kafka:9092"
       Jwt__Issuer: "examprep-auth"
       Jwt__Audience: "examprep"
@@ -42,6 +56,8 @@ services:
       postgres:
         condition: service_healthy
       kafka:
+        condition: service_healthy
+      redis:
         condition: service_healthy
 
   notifications-worker:
@@ -164,3 +180,4 @@ volumes:
   pgdata:
   kafkadata:
   pgpass_data:
+  redisdata:
