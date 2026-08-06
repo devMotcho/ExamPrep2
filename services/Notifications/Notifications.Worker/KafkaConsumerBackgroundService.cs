@@ -39,7 +39,7 @@ public class KafkaConsumerBackgroundService : BackgroundService
 
         using var consumer = new ConsumerBuilder<Ignore, string>(config).Build();
         
-        var topics = new[] { "partner-transaction", "email-verification-code-requested" };
+        var topics = new[] { "partner-transaction", "email-verification-code-requested", "password-change-code-requested" };
         consumer.Subscribe(topics);
 
         _logger.LogInformation("Kafka consumer started listening to topics: {Topics}", string.Join(", ", topics));
@@ -139,6 +139,20 @@ public class KafkaConsumerBackgroundService : BackgroundService
 
                     var subject = "Your ExamPrep Verification Code";
                     var body = $"<p>Welcome to ExamPrep!</p><p>Your verification code is: <strong>{code}</strong></p>";
+
+                    var notification = new NotificationMessage(recipient!, subject, body, NotificationType.Email);
+                    await _dispatcher.DispatchAsync(notification, cancellationToken);
+                }
+            }
+            else if (topic == "password-change-code-requested")
+            {
+                if (root.TryGetProperty("Email", out var emailProp) && root.TryGetProperty("Code", out var codeProp))
+                {
+                    var recipient = emailProp.GetString();
+                    var code = codeProp.GetString();
+
+                    var subject = "Your ExamPrep Password Change Code";
+                    var body = $"<p>You requested to change your password.</p><p>Your verification code is: <strong>{code}</strong></p>";
 
                     var notification = new NotificationMessage(recipient!, subject, body, NotificationType.Email);
                     await _dispatcher.DispatchAsync(notification, cancellationToken);

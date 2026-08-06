@@ -12,7 +12,7 @@ public class UpdateProfileResult
         new() { Status = UpdateProfileStatus.ValidationFailed, Errors = errors };
 }
 
-public enum ChangePasswordStatus { Success, IncorrectCurrentPassword, ValidationFailed }
+public enum ChangePasswordStatus { Success, IncorrectCurrentPassword, ValidationFailed, CodeNotFound, CodeInvalid, TooManyAttempts }
 
 public class ChangePasswordResult
 {
@@ -23,4 +23,7 @@ public class ChangePasswordResult
     public static ChangePasswordResult IncorrectCurrentPassword() => new() { Status = ChangePasswordStatus.IncorrectCurrentPassword };
     public static ChangePasswordResult ValidationFailed(IEnumerable<string> errors) =>
         new() { Status = ChangePasswordStatus.ValidationFailed, Errors = errors };
+    public static ChangePasswordResult CodeNotFound() => new() { Status = ChangePasswordStatus.CodeNotFound };
+    public static ChangePasswordResult CodeInvalid() => new() { Status = ChangePasswordStatus.CodeInvalid };
+    public static ChangePasswordResult TooManyAttempts() => new() { Status = ChangePasswordStatus.TooManyAttempts };
 }
