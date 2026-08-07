@@ -6,6 +6,7 @@ using Auth.Application.Models;
 using Auth.Domain.Rules;
 using Microsoft.Extensions.Configuration;
 using Microsoft.IdentityModel.Tokens;
+using ExamPrep.Shared.Constants;
 
 namespace Auth.Infrastructure.Security;
 
@@ -34,8 +35,8 @@ public class JwtTokenService(RsaKeyProvider keys, IConfiguration config) : IToke
         }
 
         var token = new JwtSecurityToken(
-            issuer: config["Jwt:Issuer"],
-            audience: config["Jwt:Audience"],
+            issuer: config[ConfigKeys.Jwt.Issuer],
+            audience: config[ConfigKeys.Jwt.Audience],
             claims: claims,
             expires: DateTime.UtcNow.Add(AuthLifetimes.AccessTokenLifetime),
             signingCredentials: creds);
