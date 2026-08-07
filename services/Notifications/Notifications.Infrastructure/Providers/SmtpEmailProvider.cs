@@ -31,7 +31,8 @@ public class SmtpEmailProvider : INotificationProvider
         try
         {
             var emailMessage = new MimeMessage();
-            emailMessage.From.Add(new MailboxAddress($"{AppConstants.AppName} System", _config[ConfigKeys.Email.FromAddress]));
+            var fromAddress = _config[ConfigKeys.Email.FromAddress] ?? throw new InvalidOperationException("Email:FromAddress is not configured.");
+            emailMessage.From.Add(new MailboxAddress($"{AppConstants.AppName} System", fromAddress));
             emailMessage.To.Add(new MailboxAddress("", message.Recipient));
             emailMessage.Subject = message.Subject;
 
@@ -43,8 +44,8 @@ public class SmtpEmailProvider : INotificationProvider
             // For Google SMTP
             var host = _config[ConfigKeys.Email.SmtpHost] ?? "smtp.gmail.com";
             var port = int.Parse(_config[ConfigKeys.Email.SmtpPort] ?? "587");
-            var username = _config[ConfigKeys.Email.Username];
-            var password = _config[ConfigKeys.Email.Password]; // Use App Password for Gmail
+            var username = _config[ConfigKeys.Email.Username] ?? throw new InvalidOperationException("Email:Username is not configured.");
+            var password = _config[ConfigKeys.Email.Password] ?? throw new InvalidOperationException("Email:Password is not configured."); // Use App Password for Gmail
 
             await client.ConnectAsync(host, port, SecureSocketOptions.StartTls, cancellationToken);
             await client.AuthenticateAsync(username, password, cancellationToken);
