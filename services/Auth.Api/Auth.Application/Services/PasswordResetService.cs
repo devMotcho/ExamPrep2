@@ -6,6 +6,7 @@ using Auth.Application.Events;
 using Auth.Application.Interfaces;
 using Auth.Application.Results;
 using Auth.Domain.Rules;
+using ExamPrep.Shared.Constants;
 
 namespace Auth.Application.Services;
 
@@ -39,7 +40,7 @@ public class PasswordResetService(
             // Publish the event with the raw code so Notification.Api can embed
             // it in the email. Auth.Api only stores the hash.
             await outbox.AddAsync(
-                topic: ExamPrep.Shared.Constants.KafkaTopics.PasswordResetRequested,
+                topic: KafkaTopics.PasswordResetRequested,
                 key: user.Id,
                 payload: JsonSerializer.Serialize(
                     new PasswordResetRequestedEvent(user.Id, user.Email, rawCode)));

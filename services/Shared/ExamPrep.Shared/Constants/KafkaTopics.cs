@@ -1,4 +1,5 @@
 namespace ExamPrep.Shared.Constants;
+using ExamPrep.Shared.Constants;
 
 public static class KafkaTopics
 {

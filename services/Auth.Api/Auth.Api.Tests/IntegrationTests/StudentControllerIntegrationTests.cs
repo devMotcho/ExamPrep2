@@ -4,6 +4,7 @@ using System.Net.Http.Headers;
 using Auth.Api.Contracts;
 using Auth.Api.Tests.Fixtures;
 using Microsoft.Extensions.DependencyInjection;
+using ExamPrep.Shared.Constants;
 namespace Auth.Api.Tests.IntegrationTests;
 
 public class StudentControllerIntegrationTests : IClassFixture<AuthApiWebApplicationFactory>
@@ -88,7 +89,7 @@ public class StudentControllerIntegrationTests : IClassFixture<AuthApiWebApplica
 
         var message = await Microsoft.EntityFrameworkCore.EntityFrameworkQueryableExtensions.FirstOrDefaultAsync(
             System.Linq.Queryable.OrderByDescending(
-                System.Linq.Queryable.Where(db.OutboxMessages, m => m.Topic == ExamPrep.Shared.Constants.KafkaTopics.PasswordChangeCodeRequested && m.Key == user.Id),
+                System.Linq.Queryable.Where(db.OutboxMessages, m => m.Topic == KafkaTopics.PasswordChangeCodeRequested && m.Key == user.Id),
                 m => m.CreatedAt));
 
         if (message is null) return null;

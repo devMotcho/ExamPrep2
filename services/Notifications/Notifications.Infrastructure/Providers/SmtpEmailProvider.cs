@@ -9,6 +9,7 @@ using MimeKit;
 using Notifications.Application.Interfaces;
 using Notifications.Domain.Enums;
 using Notifications.Domain.Models;
+using ExamPrep.Shared.Constants;
 
 namespace Notifications.Infrastructure.Providers;
 
@@ -30,7 +31,7 @@ public class SmtpEmailProvider : INotificationProvider
         try
         {
             var emailMessage = new MimeMessage();
-            emailMessage.From.Add(new MailboxAddress($"{ExamPrep.Shared.Constants.AppConstants.AppName} System", _config["Email:FromAddress"]));
+            emailMessage.From.Add(new MailboxAddress($"{AppConstants.AppName} System", _config[ConfigKeys.Email.FromAddress]));
             emailMessage.To.Add(new MailboxAddress("", message.Recipient));
             emailMessage.Subject = message.Subject;
 
@@ -40,10 +41,10 @@ public class SmtpEmailProvider : INotificationProvider
             using var client = new SmtpClient();
             
             // For Google SMTP
-            var host = _config["Email:SmtpHost"] ?? "smtp.gmail.com";
-            var port = int.Parse(_config["Email:SmtpPort"] ?? "587");
-            var username = _config["Email:Username"];
-            var password = _config["Email:Password"]; // Use App Password for Gmail
+            var host = _config[ConfigKeys.Email.SmtpHost] ?? "smtp.gmail.com";
+            var port = int.Parse(_config[ConfigKeys.Email.SmtpPort] ?? "587");
+            var username = _config[ConfigKeys.Email.Username];
+            var password = _config[ConfigKeys.Email.Password]; // Use App Password for Gmail
 
             await client.ConnectAsync(host, port, SecureSocketOptions.StartTls, cancellationToken);
             await client.AuthenticateAsync(username, password, cancellationToken);

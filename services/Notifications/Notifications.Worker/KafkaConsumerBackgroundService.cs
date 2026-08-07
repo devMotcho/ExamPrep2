@@ -3,6 +3,7 @@ using Confluent.Kafka;
 using Notifications.Application.Interfaces;
 using Notifications.Domain.Enums;
 using Notifications.Domain.Models;
+using ExamPrep.Shared.Constants;
 
 namespace Notifications.Worker;
 
@@ -29,17 +30,17 @@ public class KafkaConsumerBackgroundService : BackgroundService
     {
         var config = new ConsumerConfig
         {
-            BootstrapServers = _config["Kafka:BootstrapServers"] ?? "localhost:9092",
-            GroupId = _config["Kafka:GroupId"] ?? "notifications-worker-group",
+            BootstrapServers = _config[ConfigKeys.Kafka.BootstrapServers] ?? "localhost:9092",
+            GroupId = _config[ConfigKeys.Kafka.GroupId] ?? "notifications-worker-group",
             AutoOffsetReset = AutoOffsetReset.Earliest
         };
 
         using var consumer = new ConsumerBuilder<Ignore, string>(config).Build();
         
         var topics = new[] { 
-            ExamPrep.Shared.Constants.KafkaTopics.PartnerTransaction, 
-            ExamPrep.Shared.Constants.KafkaTopics.EmailVerificationCodeRequested, 
-            ExamPrep.Shared.Constants.KafkaTopics.PasswordChangeCodeRequested 
+            KafkaTopics.PartnerTransaction, 
+            KafkaTopics.EmailVerificationCodeRequested, 
+            KafkaTopics.PasswordChangeCodeRequested 
         };
         consumer.Subscribe(topics);
 
@@ -114,7 +115,7 @@ public class KafkaConsumerBackgroundService : BackgroundService
                 root = JsonDocument.Parse(json).RootElement;
             }
 
-            if (topic == ExamPrep.Shared.Constants.KafkaTopics.PartnerTransaction)
+            if (topic == KafkaTopics.PartnerTransaction)
             {
                 if (root.TryGetProperty("PartnerEmail", out var emailProp))
                 {
@@ -124,50 +125,50 @@ public class KafkaConsumerBackgroundService : BackgroundService
                     var desc = root.GetProperty("Description").GetString();
                     var balance = root.GetProperty("NewBalance").GetDecimal();
 
-                    var subject = $"{ExamPrep.Shared.Constants.AppConstants.AppName} Partner Balance Update: {type}";
+                    var subject = $"{AppConstants.AppName} Partner Balance Update: {type}";
                     var body = await _templateService.RenderAsync("PartnerTransaction", new {
                         type = type,
                         amount = amount.ToString("0.00"),
                         desc = desc,
                         balance = balance.ToString("0.00"),
                         year = DateTime.UtcNow.Year,
-                        appName = ExamPrep.Shared.Constants.AppConstants.AppName
+                        appName = AppConstants.AppName
                     });
 
                     var notification = new NotificationMessage(recipient!, subject, body, NotificationType.Email);
                     await _dispatcher.DispatchAsync(notification, cancellationToken);
                 }
             }
-            else if (topic == ExamPrep.Shared.Constants.KafkaTopics.EmailVerificationCodeRequested)
+            else if (topic == KafkaTopics.EmailVerificationCodeRequested)
             {
                 if (root.TryGetProperty("Email", out var emailProp) && root.TryGetProperty("Code", out var codeProp))
                 {
                     var recipient = emailProp.GetString();
                     var code = codeProp.GetString();
 
-                    var subject = $"Your {ExamPrep.Shared.Constants.AppConstants.AppName} Verification Code";
+                    var subject = $"Your {AppConstants.AppName} Verification Code";
                     var body = await _templateService.RenderAsync("EmailVerification", new { 
                         code = code, 
                         year = DateTime.UtcNow.Year,
-                        appName = ExamPrep.Shared.Constants.AppConstants.AppName
+                        appName = AppConstants.AppName
                     });
 
                     var notification = new NotificationMessage(recipient!, subject, body, NotificationType.Email);
                     await _dispatcher.DispatchAsync(notification, cancellationToken);
                 }
             }
-            else if (topic == ExamPrep.Shared.Constants.KafkaTopics.PasswordChangeCodeRequested)
+            else if (topic == KafkaTopics.PasswordChangeCodeRequested)
             {
                 if (root.TryGetProperty("Email", out var emailProp) && root.TryGetProperty("Code", out var codeProp))
                 {
                     var recipient = emailProp.GetString();
                     var code = codeProp.GetString();
 
-                    var subject = $"Your {ExamPrep.Shared.Constants.AppConstants.AppName} Password Change Code";
+                    var subject = $"Your {AppConstants.AppName} Password Change Code";
                     var body = await _templateService.RenderAsync("PasswordChange", new { 
                         code = code, 
                         year = DateTime.UtcNow.Year,
-                        appName = ExamPrep.Shared.Constants.AppConstants.AppName
+                        appName = AppConstants.AppName
                     });
 
                     var notification = new NotificationMessage(recipient!, subject, body, NotificationType.Email);

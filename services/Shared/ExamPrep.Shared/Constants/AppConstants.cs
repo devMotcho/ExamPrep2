@@ -1,6 +1,7 @@
 namespace ExamPrep.Shared.Constants;
+using ExamPrep.Shared.Constants;
 
 public static class AppConstants
 {
-    public const string AppName = "ExamPrep";
+    public const string AppName = "escolhamultipla.pt";
 }
