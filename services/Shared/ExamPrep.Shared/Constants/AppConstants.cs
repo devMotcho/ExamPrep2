@@ -1,5 +1,4 @@
 namespace ExamPrep.Shared.Constants;
-using ExamPrep.Shared.Constants;
 
 public static class AppConstants
 {

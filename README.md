@@ -67,6 +67,14 @@ As this is an ongoing rewrite using a Microservices architecture, the current fo
 - Admin Dashboard APIs: Optimized endpoints (`ILike` PostgreSQL text searches, batched EF Core queries) to list, manage, and assign roles to users.
 - 100% Test Coverage: Verified by dozens of robust integration tests using real PostgreSQL Testcontainers.
 
+### Notifications Service (`Notifications`)
+- Asynchronous Delivery: Listens to Kafka topics (e.g. `email-verification-code-requested`, `partner-transaction`) and delivers messages asynchronously.
+- HTML Email Templates: Uses `Scriban` to securely render dynamic, branded HTML templates for a premium user experience.
+
+### Shared Library (`ExamPrep.Shared`)
+- DRY Principle: Centralizes Magic Strings across microservices to prevent typos and ensure consistency.
+- Standardized Constants: Maintains `KafkaTopics`, `AppConstants` (AppName), and `ConfigKeys` (`appsettings.json` keys) in one place.
+
 ---
 
 ## Roadmap / TODOs

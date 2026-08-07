@@ -6,8 +6,10 @@ This service is responsible for consuming asynchronous events (via Kafka) and di
 
 - **Domain (`Notifications.Domain`)**: Contains the core `NotificationMessage` model and the `NotificationType` enum.
 - **Application (`Notifications.Application`)**: Contains interfaces (`INotificationProvider`, `INotificationDispatcher`) and the `NotificationDispatcher` which orchestrates routing messages to the correct infrastructure provider.
-- **Infrastructure (`Notifications.Infrastructure`)**: Contains specific implementations for delivering notifications (e.g., `SmtpEmailProvider` using Google Mail servers).
-- **Worker (`Notifications.Worker`)**: The entry point. A Background Hosted Service (`KafkaConsumerBackgroundService`) that constantly listens for events on Kafka topics, formats them into `NotificationMessage` objects, and passes them to the Dispatcher.
+- **Infrastructure (`Notifications.Infrastructure`)**: Contains specific implementations for delivering notifications (e.g., `SmtpEmailProvider` using Google Mail servers). It also contains the `ScribanTemplateService` for rendering HTML emails.
+- **Worker (`Notifications.Worker`)**: The entry point. A Background Hosted Service (`KafkaConsumerBackgroundService`) that constantly listens for events on Kafka topics, formats them into `NotificationMessage` objects, and passes them to the Dispatcher. It holds the HTML templates inside the `Templates/` directory.
+
+> **Note**: This service references the `ExamPrep.Shared` library to consume globally standardized `KafkaTopics`, `ConfigKeys`, and `AppConstants`, preventing duplicated hard-coded strings.
 
 ## How to Add a New Notification Type (e.g., SMS)
 

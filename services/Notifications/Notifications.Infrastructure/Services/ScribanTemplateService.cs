@@ -1,6 +1,4 @@
 using System.Reflection;
-using Notifications.Application.Interfaces;
-using Scriban;
 namespace Notifications.Infrastructure.Services;
 
 public class ScribanTemplateService : ITemplateService
