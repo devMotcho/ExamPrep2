@@ -3,6 +3,7 @@ using Microsoft.Extensions.Hosting;
 using Notifications.Application.Interfaces;
 using Notifications.Application.Services;
 using Notifications.Infrastructure.Providers;
+using Notifications.Infrastructure.Services;
 using Notifications.Worker;
 
 var host = Host.CreateDefaultBuilder(args)
@@ -10,7 +11,7 @@ var host = Host.CreateDefaultBuilder(args)
     {
         // Application
         services.AddSingleton<INotificationDispatcher, NotificationDispatcher>();
-        services.AddSingleton<ITemplateService, Notifications.Infrastructure.Services.ScribanTemplateService>();
+        services.AddSingleton<ITemplateService, ScribanTemplateService>();
 
         // Infrastructure Providers
         services.AddSingleton<INotificationProvider, SmtpEmailProvider>();
