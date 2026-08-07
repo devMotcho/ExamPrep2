@@ -32,8 +32,8 @@ services:
 
   auth-api:
     build:
-      context: ../services/Auth.Api
-      dockerfile: Auth.Api/Dockerfile
+      context: ../services
+      dockerfile: Auth.Api/Auth.Api/Dockerfile
     container_name: auth-api
     ports:
       - "5001:8080"
@@ -62,8 +62,8 @@ services:
 
   notifications-worker:
     build:
-      context: ../services/Notifications
-      dockerfile: Notifications.Worker/Dockerfile
+      context: ../services
+      dockerfile: Notifications/Notifications.Worker/Dockerfile
     container_name: notifications-worker
     environment:
       Kafka__BootstrapServers: "kafka:9092"

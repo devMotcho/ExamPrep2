@@ -3,13 +3,14 @@ WORKDIR /app
 
 FROM mcr.microsoft.com/dotnet/sdk:9.0 AS build
 WORKDIR /src
-COPY ["Notifications.Worker/Notifications.Worker.csproj", "Notifications.Worker/"]
-COPY ["Notifications.Domain/Notifications.Domain.csproj", "Notifications.Domain/"]
-COPY ["Notifications.Application/Notifications.Application.csproj", "Notifications.Application/"]
-COPY ["Notifications.Infrastructure/Notifications.Infrastructure.csproj", "Notifications.Infrastructure/"]
-RUN dotnet restore "Notifications.Worker/Notifications.Worker.csproj"
+COPY ["Notifications/Notifications.Worker/Notifications.Worker.csproj", "Notifications/Notifications.Worker/"]
+COPY ["Notifications/Notifications.Domain/Notifications.Domain.csproj", "Notifications/Notifications.Domain/"]
+COPY ["Notifications/Notifications.Application/Notifications.Application.csproj", "Notifications/Notifications.Application/"]
+COPY ["Notifications/Notifications.Infrastructure/Notifications.Infrastructure.csproj", "Notifications/Notifications.Infrastructure/"]
+COPY ["Shared/ExamPrep.Shared/ExamPrep.Shared.csproj", "Shared/ExamPrep.Shared/"]
+RUN dotnet restore "Notifications/Notifications.Worker/Notifications.Worker.csproj"
 COPY . .
-WORKDIR "/src/Notifications.Worker"
+WORKDIR "/src/Notifications/Notifications.Worker"
 RUN dotnet build "Notifications.Worker.csproj" -c Release -o /app/build
 
 FROM build AS publish
