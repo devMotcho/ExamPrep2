@@ -55,6 +55,19 @@ public class AuthApiWebApplicationFactory : WebApplicationFactory<Program>, IAsy
                 ["Jwt:PublicKeyPath"] = _publicKeyPath
             });
         });
+
+        builder.ConfigureServices(services =>
+        {
+            // Remove the real Redis distributed cache
+            var descriptor = services.SingleOrDefault(d => d.ServiceType == typeof(Microsoft.Extensions.Caching.Distributed.IDistributedCache));
+            if (descriptor != null)
+            {
+                services.Remove(descriptor);
+            }
+            
+            // Add in-memory distributed cache for tests
+            services.AddDistributedMemoryCache();
+        });
     }
 
     public async Task ManuallyVerifyEmailAsync(string email)

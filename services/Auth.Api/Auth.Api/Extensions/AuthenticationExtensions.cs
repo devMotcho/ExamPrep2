@@ -2,6 +2,8 @@ using Auth.Application.Interfaces;
 using Auth.Infrastructure.Security;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.IdentityModel.Tokens;
+using System.IdentityModel.Tokens.Jwt;
+using ExamPrep.Shared.Constants;
 
 namespace Auth.Api.Extensions;
 
@@ -35,10 +37,26 @@ public static class AuthenticationExtensions
                     ValidateAudience = true,
                     ValidateLifetime = true,
                     ValidateIssuerSigningKey = true,
-                    ValidIssuer = cfg["Jwt:Issuer"],
-                    ValidAudience = cfg["Jwt:Audience"],
+                    ValidIssuer = cfg[ConfigKeys.Jwt.Issuer],
+                    ValidAudience = cfg[ConfigKeys.Jwt.Audience],
                     IssuerSigningKey = new RsaSecurityKey(keys.PublicKey) { KeyId = keys.KeyId },
                     ClockSkew = TimeSpan.Zero
+                };
+
+                options.Events = new JwtBearerEvents
+                {
+                    OnTokenValidated = async context =>
+                    {
+                        var jti = context.Principal?.Claims.FirstOrDefault(c => c.Type == JwtRegisteredClaimNames.Jti)?.Value;
+                        if (!string.IsNullOrEmpty(jti))
+                        {
+                            var blocklistService = context.HttpContext.RequestServices.GetRequiredService<IJwtBlocklistService>();
+                            if (await blocklistService.IsTokenBlockedAsync(jti))
+                            {
+                                context.Fail("This token has been revoked.");
+                            }
+                        }
+                    }
                 };
             });
 

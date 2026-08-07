@@ -1,4 +1,5 @@
 using System.Security.Cryptography;
+using ExamPrep.Shared.Constants;
 using Auth.Application.Interfaces;
 using Microsoft.Extensions.Configuration;
 
@@ -13,9 +14,9 @@ public class RsaKeyProvider : IJwksProvider
     public RsaKeyProvider(IConfiguration config)
     {
         PrivateKey = RSA.Create();
-        PrivateKey.ImportFromPem(File.ReadAllText(config["Jwt:PrivateKeyPath"]!));
+        PrivateKey.ImportFromPem(File.ReadAllText(config[ConfigKeys.Jwt.PrivateKeyPath]!));
 
         PublicKey = RSA.Create();
-        PublicKey.ImportFromPem(File.ReadAllText(config["Jwt:PublicKeyPath"]!));
+        PublicKey.ImportFromPem(File.ReadAllText(config[ConfigKeys.Jwt.PublicKeyPath]!));
     }
 }

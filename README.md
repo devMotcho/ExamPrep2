@@ -26,11 +26,12 @@ Version 2 (this repository) was born out of a desire to do it right. I decided t
 
 I built this platform utilizing a modern, scalable tech stack, heavily tailored around my personal development workflow:
 
-* Development Environment: Ghostty, Neovim (fully customized for C# / .NET development)
+* Development Environment: Ghostty, Tmux and Neovim (fully customized for C# / .NET development)
 * API Testing & Documentation: Postman & Swagger (OpenAPI)
 * Backend Framework: .NET 9 (C#) using ASP.NET Core Web API
 * Database & ORM: PostgreSQL & Entity Framework Core (EF Core)
-* Identity & Security: ASP.NET Core Identity, JWT Bearer Auth, Custom OTP generation
+* Caching & Stateful Security: Redis (Distributed caching & JWT Blocklists)
+* Identity & Security: ASP.NET Core Identity, JWT Bearer Auth (JWKS), Custom OTP generation
 * Message Broker: Apache Kafka (for asynchronous microservice communication)
 * Containerization: Docker & Docker Compose
 * Testing: xUnit, Moq, Testcontainers (for real database integration testing)
@@ -57,12 +58,22 @@ EscolhaMúltipla is a collaborative multiple-choice exam study tool built for st
 As this is an ongoing rewrite using a Microservices architecture, the current focus has been perfecting the Authentication & Identity Service (`Auth.Api`).
 
 ### Auth Service (`Auth.Api`)
-- Robust RBAC System: Full Role-Based Access Control (Student, Promoter, Admin, SuperAdmin).
-- Secure Registration & Login: JWT generation with embedded role claims.
+- Robust RBAC System: Full Role-Based Access Control (Student, Promoter, Partner, Admin, SuperAdmin).
+- Partner System: Advanced referral system allowing user linking at registration, integrated transactional ledgers for revenue sharing (balances and manual payouts), and Outbox Pattern notifications.
+- Secure Registration & Login: JWT generation signed with Asymmetric RSA keys (JWKS) and embedded role claims.
+- Stateless Logout & Token Revocation: Redis-backed JWT blocklist instantly revokes access tokens system-wide without losing stateless authentication benefits.
 - Email Verification (OTP): Custom, database-backed OTP generation and verification for confirming new user accounts.
 - Profile Management: Self-service profile updates (names, phone numbers), secure password changes, and account deactivation.
 - Admin Dashboard APIs: Optimized endpoints (`ILike` PostgreSQL text searches, batched EF Core queries) to list, manage, and assign roles to users.
 - 100% Test Coverage: Verified by dozens of robust integration tests using real PostgreSQL Testcontainers.
+
+### Notifications Service (`Notifications`)
+- Asynchronous Delivery: Listens to Kafka topics (e.g. `email-verification-code-requested`, `partner-transaction`) and delivers messages asynchronously.
+- HTML Email Templates: Uses `Scriban` to securely render dynamic, branded HTML templates for a premium user experience.
+
+### Shared Library (`ExamPrep.Shared`)
+- DRY Principle: Centralizes Magic Strings across microservices to prevent typos and ensure consistency.
+- Standardized Constants: Maintains `KafkaTopics`, `AppConstants` (AppName), and `ConfigKeys` (`appsettings.json` keys) in one place.
 
 ---
 
@@ -82,7 +93,16 @@ The following features represent the core domain of the application and are sche
 
 ## Getting Started
 
-To run the local infrastructure (PostgreSQL, Kafka, etc.):
+### 1. Configure Secrets (.env)
+All sensitive configurations (Database strings, Google OAuth secrets, SMTP passwords) have been extracted from `appsettings.json` and moved into a secure `.env` file for Docker.
+To set up your local secrets:
+1. Navigate to the `infra/` folder.
+2. Copy the example file: `cp .env.example .env`
+3. Open the new `.env` file and fill in your actual secrets (e.g., Google App Password for emails, OAuth Client ID).
+*(Note: `*.env` is ignored by Git to prevent accidental credential leaks).*
+
+### 2. Run the Infrastructure
+To run the local infrastructure (PostgreSQL, Kafka, Notification Worker, etc.):
 
 ```bash
 cd infra

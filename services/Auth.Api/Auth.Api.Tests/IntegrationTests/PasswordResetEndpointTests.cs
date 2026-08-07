@@ -7,6 +7,7 @@ using Auth.Application.Events;
 using Auth.Infrastructure.Persistence;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
+using ExamPrep.Shared.Constants;
 
 namespace Auth.Api.Tests.IntegrationTests;
 
@@ -40,7 +41,7 @@ public class PasswordResetEndpointTests : IClassFixture<AuthApiWebApplicationFac
 
         // Get the latest outbox message for this user for password reset
         var message = await db.OutboxMessages
-            .Where(m => m.Topic == "password-reset-requested" && m.Key == user.Id)
+            .Where(m => m.Topic == KafkaTopics.PasswordResetRequested && m.Key == user.Id)
             .OrderByDescending(m => m.CreatedAt)
             .FirstOrDefaultAsync();
 

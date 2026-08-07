@@ -1,5 +1,3 @@
-using System.Threading.Tasks;
-
 namespace Auth.Application.Interfaces;
 
 public interface IPartnerRepository

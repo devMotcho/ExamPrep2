@@ -2,7 +2,6 @@ using Auth.Api.Extensions;
 using Auth.Infrastructure.Persistence;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.AspNetCore.Identity;
-using Auth.Domain.Rules;
 using Auth.Infrastructure.Identity;
 
 var builder = WebApplication.CreateBuilder(args);

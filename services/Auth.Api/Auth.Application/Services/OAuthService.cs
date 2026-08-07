@@ -5,6 +5,7 @@ using Auth.Application.Results;
 using Auth.Application.Models;
 
 using Auth.Domain.Rules;
+using ExamPrep.Shared.Constants;
 
 namespace Auth.Application.Services;
 
@@ -113,7 +114,7 @@ public class OAuthService(
         await users.AddLoginAsync(user.Id, providerName, externalUser.ProviderId);
 
         await outbox.AddAsync(
-            topic: "user-registered",
+            topic: KafkaTopics.UserRegistered,
             key: user.Id,
             payload: JsonSerializer.Serialize(new UserRegisteredEvent(user.Id, user.Email, user.CreatedAt)));
 

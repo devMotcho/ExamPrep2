@@ -253,6 +253,6 @@ public class UserRepository(UserManager<User> userManager, AuthDbContext dbConte
     private async Task<AppUser> MapAsync(User user)
     {
         var roles = await userManager.GetRolesAsync(user);
-        return new AppUser(user.Id, user.Email!, user.CreatedAt, roles.ToList(), user.FirstName, user.LastName);
+        return new AppUser(user.Id, user.Email!, user.CreatedAt, roles.ToList(), user.FirstName, user.LastName, user.PhoneNumber);
     }
 }

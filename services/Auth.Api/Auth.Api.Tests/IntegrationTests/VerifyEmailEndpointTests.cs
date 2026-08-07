@@ -6,6 +6,7 @@ using Auth.Api.Tests.Fixtures;
 using Auth.Application.Events;
 using Auth.Infrastructure.Persistence;
 using Microsoft.EntityFrameworkCore;
+using ExamPrep.Shared.Constants;
 
 namespace Auth.Api.Tests.IntegrationTests;
 
@@ -33,7 +34,7 @@ public class VerifyEmailEndpointTests : IClassFixture<AuthApiWebApplicationFacto
         await using var db = CreateDbContext();
         
         var message = await db.OutboxMessages
-            .Where(m => m.Topic == "email-verification-code-requested" && m.Payload.Contains(email))
+            .Where(m => m.Topic == KafkaTopics.EmailVerificationCodeRequested && m.Payload.Contains(email))
             .OrderByDescending(m => m.CreatedAt)
             .FirstOrDefaultAsync();
 

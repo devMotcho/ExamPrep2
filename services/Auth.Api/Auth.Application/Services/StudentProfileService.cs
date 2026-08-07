@@ -1,6 +1,12 @@
+using System.Security.Cryptography;
+using System.Text;
+using System.Text.Json;
+using Auth.Application.Events;
 using Auth.Application.Models;
 using Auth.Application.Results;
 using Auth.Application.Interfaces;
+using Auth.Domain.Rules;
+using ExamPrep.Shared.Constants;
 
 namespace Auth.Application.Services;
 
@@ -8,11 +14,18 @@ public interface IStudentProfileService
 {
     Task<AppUser?> GetProfileAsync(string userId);
     Task<UpdateProfileResult> UpdateProfileAsync(string userId, string? firstName, string? lastName, string? phoneNumber);
-    Task<ChangePasswordResult> ChangePasswordAsync(string userId, string currentPassword, string newPassword);
+    Task RequestChangePasswordCodeAsync(string userId);
+    Task<ChangePasswordResult> ChangePasswordAsync(string userId, string currentPassword, string newPassword, string code);
     Task DeactivateAsync(string userId);
 }
 
-public class StudentProfileService(IUserRepository users, IRefreshTokenRepository refreshTokens, IUnitOfWork unitOfWork)
+public class StudentProfileService(
+    IUserRepository users, 
+    IRefreshTokenRepository refreshTokens, 
+    IPasswordResetCodeRepository codes,
+    ITokenService tokenService,
+    IOutboxRepository outbox,
+    IUnitOfWork unitOfWork)
     : IStudentProfileService
 {
     public async Task<AppUser?> GetProfileAsync(string userId) => await users.FindByIdAsync(userId);
@@ -28,16 +41,59 @@ public class StudentProfileService(IUserRepository users, IRefreshTokenRepositor
             : UpdateProfileResult.ValidationFailed(result.Errors.Select(e => e.Description));
     }
 
-    public async Task<ChangePasswordResult> ChangePasswordAsync(string userId, string currentPassword, string newPassword)
+    public async Task RequestChangePasswordCodeAsync(string userId)
+    {
+        var user = await users.FindByIdAsync(userId);
+        if (user is not null)
+        {
+            var rawCode = tokenService.GenerateOtpCode();
+            var codeHash = tokenService.HashOtpCode(rawCode);
+
+            await using var transaction = await unitOfWork.BeginTransactionAsync();
+
+            await codes.AddAsync(user.Id, codeHash, DateTime.UtcNow.Add(AuthLifetimes.PasswordResetCodeLifetime));
+
+            await outbox.AddAsync(
+                topic: KafkaTopics.PasswordChangeCodeRequested,
+                key: user.Id,
+                payload: JsonSerializer.Serialize(
+                    new PasswordChangeCodeRequestedEvent(user.Id, user.Email, rawCode)));
+
+            await unitOfWork.SaveChangesAsync();
+            await transaction.CommitAsync();
+        }
+    }
+
+    public async Task<ChangePasswordResult> ChangePasswordAsync(string userId, string currentPassword, string newPassword, string code)
     {
         var user = await users.FindByIdAsync(userId);
         if (user is null) return ChangePasswordResult.IncorrectCurrentPassword(); // don't leak existence
 
+        var storedCode = await codes.FindActiveByUserIdAsync(userId);
+        if (storedCode is null || storedCode.ExpiresAt < DateTime.UtcNow)
+            return ChangePasswordResult.CodeNotFound();
+
+        if (storedCode.Attempts >= AuthLifetimes.MaxCodeAttempts)
+            return ChangePasswordResult.TooManyAttempts();
+
+        if (!CryptographicOperations.FixedTimeEquals(
+                Encoding.UTF8.GetBytes(tokenService.HashOtpCode(code)),
+                Encoding.UTF8.GetBytes(storedCode.CodeHash)))
+        {
+            await codes.IncrementAttemptsAsync(storedCode.Id);
+            await unitOfWork.SaveChangesAsync();
+            return ChangePasswordResult.CodeInvalid();
+        }
+
+        await using var transaction = await unitOfWork.BeginTransactionAsync();
+
         var result = await users.ChangePasswordAsync(userId, currentPassword, newPassword);
         if (result.Succeeded)
         {
+            await codes.MarkUsedAsync(storedCode.Id);
             await refreshTokens.RevokeAllForUserAsync(userId);
             await unitOfWork.SaveChangesAsync();
+            await transaction.CommitAsync();
             return ChangePasswordResult.Success();
         }
 
