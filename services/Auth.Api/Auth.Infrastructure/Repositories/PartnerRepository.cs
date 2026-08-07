@@ -2,9 +2,9 @@ using Auth.Application.Interfaces;
 using Auth.Infrastructure.Identity;
 using Auth.Infrastructure.Persistence;
 using Microsoft.EntityFrameworkCore;
-using ExamPrep.Shared.Constants;
 using Auth.Application.Events;
 using System.Text.Json;
+using ExamPrep.Shared.Constants;
 
 namespace Auth.Infrastructure.Repositories;
 
