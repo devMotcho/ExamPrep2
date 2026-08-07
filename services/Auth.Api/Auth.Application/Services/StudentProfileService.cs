@@ -51,7 +51,7 @@ public class StudentProfileService(
             await codes.AddAsync(user.Id, codeHash, DateTime.UtcNow.Add(AuthLifetimes.PasswordResetCodeLifetime));
 
             await outbox.AddAsync(
-                topic: "password-change-code-requested",
+                topic: ExamPrep.Shared.Constants.KafkaTopics.PasswordChangeCodeRequested,
                 key: user.Id,
                 payload: JsonSerializer.Serialize(
                     new PasswordChangeCodeRequestedEvent(user.Id, user.Email, rawCode)));

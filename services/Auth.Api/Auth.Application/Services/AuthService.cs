@@ -31,7 +31,7 @@ public class AuthService(
         await verificationCodes.UpsertAsync(email, codeHash, DateTime.UtcNow.Add(AuthLifetimes.EmailVerificationCodeLifetime));
 
         await outbox.AddAsync(
-            topic: "email-verification-code-requested",
+            topic: ExamPrep.Shared.Constants.KafkaTopics.EmailVerificationCodeRequested,
             key: email,
             payload: JsonSerializer.Serialize(new EmailVerificationCodeRequestedEvent(email, rawCode)));
 
@@ -131,7 +131,7 @@ public class AuthService(
         await refreshTokens.AddAsync(user.Id, refreshTokenHash, DateTime.UtcNow.AddDays(30));
 
         await outbox.AddAsync(
-            topic: "user-registered",
+            topic: ExamPrep.Shared.Constants.KafkaTopics.UserRegistered,
             key: user.Id,
             payload: JsonSerializer.Serialize(new UserRegisteredEvent(user.Id, user.Email, user.CreatedAt)));
 

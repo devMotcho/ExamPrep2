@@ -47,7 +47,7 @@ public class PartnerRepository(AuthDbContext dbContext, IOutboxRepository outbox
         var evt = new Auth.Application.Events.PartnerTransactionEvent(
             partner.Email!, amount, "Addition", description, partner.PartnerBalance);
             
-        await outbox.AddAsync("partner-transaction", partnerId, System.Text.Json.JsonSerializer.Serialize(evt));
+        await outbox.AddAsync(ExamPrep.Shared.Constants.KafkaTopics.PartnerTransaction, partnerId, System.Text.Json.JsonSerializer.Serialize(evt));
         await dbContext.SaveChangesAsync();
 
         return true;
@@ -79,7 +79,7 @@ public class PartnerRepository(AuthDbContext dbContext, IOutboxRepository outbox
         var evt = new Auth.Application.Events.PartnerTransactionEvent(
             partner.Email!, amount, "Subtraction", description, partner.PartnerBalance);
             
-        await outbox.AddAsync("partner-transaction", partnerId, System.Text.Json.JsonSerializer.Serialize(evt));
+        await outbox.AddAsync(ExamPrep.Shared.Constants.KafkaTopics.PartnerTransaction, partnerId, System.Text.Json.JsonSerializer.Serialize(evt));
         await dbContext.SaveChangesAsync();
 
         return true;

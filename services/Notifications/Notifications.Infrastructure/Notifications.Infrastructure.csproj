@@ -2,6 +2,7 @@
 
   <ItemGroup>
     <ProjectReference Include="..\Notifications.Application\Notifications.Application.csproj" />
+    <ProjectReference Include="..\..\Shared\ExamPrep.Shared\ExamPrep.Shared.csproj" />
   </ItemGroup>
 
   <ItemGroup>

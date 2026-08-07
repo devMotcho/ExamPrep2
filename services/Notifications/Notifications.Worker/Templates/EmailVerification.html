@@ -3,7 +3,7 @@
 <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>ExamPrep - Email Verification</title>
+    <title>{{ app_name }} - Email Verification</title>
     <style>
         body {
             font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
@@ -68,20 +68,20 @@
 <body>
     <div class="container">
         <div class="header">
-            <h1>ExamPrep</h1>
+            <h1>{{ app_name }}</h1>
         </div>
         <div class="content">
-            <h2>Welcome to ExamPrep!</h2>
+            <h2>Welcome to {{ app_name }}!</h2>
             <p>Thank you for signing up. To complete your registration and verify your email address, please use the following verification code:</p>
             
             <div class="code-box">
                 <span class="code">{{ code }}</span>
             </div>
             
-            <p>If you didn't create an account with ExamPrep, please ignore this email.</p>
+            <p>If you didn't create an account with {{ app_name }}, please ignore this email.</p>
         </div>
         <div class="footer">
-            &copy; {{ year }} ExamPrep. All rights reserved.
+            &copy; {{ year }} {{ app_name }}. All rights reserved.
         </div>
     </div>
 </body>

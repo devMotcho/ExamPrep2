@@ -33,7 +33,7 @@ public class RegisterEndpointTests : IClassFixture<AuthApiWebApplicationFactory>
         await using var db = CreateDbContext();
         
         var message = await db.OutboxMessages
-            .Where(m => m.Topic == "email-verification-code-requested" && m.Payload.Contains(email))
+            .Where(m => m.Topic == ExamPrep.Shared.Constants.KafkaTopics.EmailVerificationCodeRequested && m.Payload.Contains(email))
             .OrderByDescending(m => m.CreatedAt)
             .FirstOrDefaultAsync();
 

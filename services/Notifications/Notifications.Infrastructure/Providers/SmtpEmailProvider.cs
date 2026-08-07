@@ -30,7 +30,7 @@ public class SmtpEmailProvider : INotificationProvider
         try
         {
             var emailMessage = new MimeMessage();
-            emailMessage.From.Add(new MailboxAddress("ExamPrep System", _config["Email:FromAddress"]));
+            emailMessage.From.Add(new MailboxAddress($"{ExamPrep.Shared.Constants.AppConstants.AppName} System", _config["Email:FromAddress"]));
             emailMessage.To.Add(new MailboxAddress("", message.Recipient));
             emailMessage.Subject = message.Subject;
 

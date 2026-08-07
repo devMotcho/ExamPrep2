@@ -88,7 +88,7 @@ public class StudentControllerIntegrationTests : IClassFixture<AuthApiWebApplica
 
         var message = await Microsoft.EntityFrameworkCore.EntityFrameworkQueryableExtensions.FirstOrDefaultAsync(
             System.Linq.Queryable.OrderByDescending(
-                System.Linq.Queryable.Where(db.OutboxMessages, m => m.Topic == "password-change-code-requested" && m.Key == user.Id),
+                System.Linq.Queryable.Where(db.OutboxMessages, m => m.Topic == ExamPrep.Shared.Constants.KafkaTopics.PasswordChangeCodeRequested && m.Key == user.Id),
                 m => m.CreatedAt));
 
         if (message is null) return null;

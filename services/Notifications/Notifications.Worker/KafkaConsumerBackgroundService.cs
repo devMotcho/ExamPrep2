@@ -36,7 +36,11 @@ public class KafkaConsumerBackgroundService : BackgroundService
 
         using var consumer = new ConsumerBuilder<Ignore, string>(config).Build();
         
-        var topics = new[] { "partner-transaction", "email-verification-code-requested", "password-change-code-requested" };
+        var topics = new[] { 
+            ExamPrep.Shared.Constants.KafkaTopics.PartnerTransaction, 
+            ExamPrep.Shared.Constants.KafkaTopics.EmailVerificationCodeRequested, 
+            ExamPrep.Shared.Constants.KafkaTopics.PasswordChangeCodeRequested 
+        };
         consumer.Subscribe(topics);
 
         _logger.LogInformation("Kafka consumer started listening to topics: {Topics}", string.Join(", ", topics));
@@ -110,7 +114,7 @@ public class KafkaConsumerBackgroundService : BackgroundService
                 root = JsonDocument.Parse(json).RootElement;
             }
 
-            if (topic == "partner-transaction")
+            if (topic == ExamPrep.Shared.Constants.KafkaTopics.PartnerTransaction)
             {
                 if (root.TryGetProperty("PartnerEmail", out var emailProp))
                 {
@@ -120,47 +124,50 @@ public class KafkaConsumerBackgroundService : BackgroundService
                     var desc = root.GetProperty("Description").GetString();
                     var balance = root.GetProperty("NewBalance").GetDecimal();
 
-                    var subject = $"Partner Balance Update: {type}";
+                    var subject = $"{ExamPrep.Shared.Constants.AppConstants.AppName} Partner Balance Update: {type}";
                     var body = await _templateService.RenderAsync("PartnerTransaction", new {
                         type = type,
                         amount = amount.ToString("0.00"),
                         desc = desc,
                         balance = balance.ToString("0.00"),
-                        year = DateTime.UtcNow.Year
+                        year = DateTime.UtcNow.Year,
+                        appName = ExamPrep.Shared.Constants.AppConstants.AppName
                     });
 
                     var notification = new NotificationMessage(recipient!, subject, body, NotificationType.Email);
                     await _dispatcher.DispatchAsync(notification, cancellationToken);
                 }
             }
-            else if (topic == "email-verification-code-requested")
+            else if (topic == ExamPrep.Shared.Constants.KafkaTopics.EmailVerificationCodeRequested)
             {
                 if (root.TryGetProperty("Email", out var emailProp) && root.TryGetProperty("Code", out var codeProp))
                 {
                     var recipient = emailProp.GetString();
                     var code = codeProp.GetString();
 
-                    var subject = "Your ExamPrep Verification Code";
+                    var subject = $"Your {ExamPrep.Shared.Constants.AppConstants.AppName} Verification Code";
                     var body = await _templateService.RenderAsync("EmailVerification", new { 
                         code = code, 
-                        year = DateTime.UtcNow.Year 
+                        year = DateTime.UtcNow.Year,
+                        appName = ExamPrep.Shared.Constants.AppConstants.AppName
                     });
 
                     var notification = new NotificationMessage(recipient!, subject, body, NotificationType.Email);
                     await _dispatcher.DispatchAsync(notification, cancellationToken);
                 }
             }
-            else if (topic == "password-change-code-requested")
+            else if (topic == ExamPrep.Shared.Constants.KafkaTopics.PasswordChangeCodeRequested)
             {
                 if (root.TryGetProperty("Email", out var emailProp) && root.TryGetProperty("Code", out var codeProp))
                 {
                     var recipient = emailProp.GetString();
                     var code = codeProp.GetString();
 
-                    var subject = "Your ExamPrep Password Change Code";
+                    var subject = $"Your {ExamPrep.Shared.Constants.AppConstants.AppName} Password Change Code";
                     var body = await _templateService.RenderAsync("PasswordChange", new { 
                         code = code, 
-                        year = DateTime.UtcNow.Year 
+                        year = DateTime.UtcNow.Year,
+                        appName = ExamPrep.Shared.Constants.AppConstants.AppName
                     });
 
                     var notification = new NotificationMessage(recipient!, subject, body, NotificationType.Email);

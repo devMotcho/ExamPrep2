@@ -113,7 +113,7 @@ public class OAuthService(
         await users.AddLoginAsync(user.Id, providerName, externalUser.ProviderId);
 
         await outbox.AddAsync(
-            topic: "user-registered",
+            topic: ExamPrep.Shared.Constants.KafkaTopics.UserRegistered,
             key: user.Id,
             payload: JsonSerializer.Serialize(new UserRegisteredEvent(user.Id, user.Email, user.CreatedAt)));
 
