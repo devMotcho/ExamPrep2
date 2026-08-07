@@ -1,9 +1,6 @@
-using System.IO;
 using System.Reflection;
-using System.Threading.Tasks;
 using Notifications.Application.Interfaces;
 using Scriban;
-
 namespace Notifications.Infrastructure.Services;
 
 public class ScribanTemplateService : ITemplateService

@@ -1,5 +1,3 @@
-using System.Threading;
-using System.Threading.Tasks;
 using Notifications.Domain.Models;
 
 namespace Notifications.Application.Interfaces;

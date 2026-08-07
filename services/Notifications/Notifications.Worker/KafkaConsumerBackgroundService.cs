@@ -1,11 +1,5 @@
-using System;
 using System.Text.Json;
-using System.Threading;
-using System.Threading.Tasks;
 using Confluent.Kafka;
-using Microsoft.Extensions.Configuration;
-using Microsoft.Extensions.Hosting;
-using Microsoft.Extensions.Logging;
 using Notifications.Application.Interfaces;
 using Notifications.Domain.Enums;
 using Notifications.Domain.Models;

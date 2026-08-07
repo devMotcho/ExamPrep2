@@ -1,5 +1,3 @@
-using System;
-using System.Collections.Generic;
 using Notifications.Domain.Enums;
 
 namespace Notifications.Domain.Models;
