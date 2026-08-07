@@ -3,6 +3,8 @@ using Auth.Infrastructure.Identity;
 using Auth.Infrastructure.Persistence;
 using Microsoft.EntityFrameworkCore;
 using ExamPrep.Shared.Constants;
+using Auth.Application.Events;
+using System.Text.Json;
 
 namespace Auth.Infrastructure.Repositories;
 
@@ -45,10 +47,10 @@ public class PartnerRepository(AuthDbContext dbContext, IOutboxRepository outbox
         
         dbContext.PartnerTransactions.Add(transaction);
         
-        var evt = new Auth.Application.Events.PartnerTransactionEvent(
+        var evt = new PartnerTransactionEvent(
             partner.Email!, amount, "Addition", description, partner.PartnerBalance);
             
-        await outbox.AddAsync(KafkaTopics.PartnerTransaction, partnerId, System.Text.Json.JsonSerializer.Serialize(evt));
+        await outbox.AddAsync(KafkaTopics.PartnerTransaction, partnerId, JsonSerializer.Serialize(evt));
         await dbContext.SaveChangesAsync();
 
         return true;
@@ -77,10 +79,10 @@ public class PartnerRepository(AuthDbContext dbContext, IOutboxRepository outbox
 
         dbContext.PartnerTransactions.Add(transaction);
         
-        var evt = new Auth.Application.Events.PartnerTransactionEvent(
+        var evt = new PartnerTransactionEvent(
             partner.Email!, amount, "Subtraction", description, partner.PartnerBalance);
             
-        await outbox.AddAsync(KafkaTopics.PartnerTransaction, partnerId, System.Text.Json.JsonSerializer.Serialize(evt));
+        await outbox.AddAsync(KafkaTopics.PartnerTransaction, partnerId, JsonSerializer.Serialize(evt));
         await dbContext.SaveChangesAsync();
 
         return true;

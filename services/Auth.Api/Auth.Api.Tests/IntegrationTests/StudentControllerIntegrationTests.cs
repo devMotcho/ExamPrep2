@@ -5,6 +5,8 @@ using Auth.Api.Contracts;
 using Auth.Api.Tests.Fixtures;
 using Microsoft.Extensions.DependencyInjection;
 using ExamPrep.Shared.Constants;
+using Auth.Application.Events;
+using System.Text.Json;
 namespace Auth.Api.Tests.IntegrationTests;
 
 public class StudentControllerIntegrationTests : IClassFixture<AuthApiWebApplicationFactory>
@@ -94,7 +96,7 @@ public class StudentControllerIntegrationTests : IClassFixture<AuthApiWebApplica
 
         if (message is null) return null;
 
-        var payload = System.Text.Json.JsonSerializer.Deserialize<Auth.Application.Events.PasswordChangeCodeRequestedEvent>(message.Payload);
+        var payload = JsonSerializer.Deserialize<PasswordChangeCodeRequestedEvent>(message.Payload);
         return payload?.Code;
     }
 
