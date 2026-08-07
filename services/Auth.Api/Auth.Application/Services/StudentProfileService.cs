@@ -1,3 +1,5 @@
+using System.Security.Cryptography;
+using System.Text;
 using System.Text.Json;
 using Auth.Application.Events;
 using Auth.Application.Models;
@@ -74,12 +76,16 @@ public class StudentProfileService(
         if (storedCode.Attempts >= AuthLifetimes.MaxCodeAttempts)
             return ChangePasswordResult.TooManyAttempts();
 
-        if (tokenService.HashOtpCode(code) != storedCode.CodeHash)
+        if (!CryptographicOperations.FixedTimeEquals(
+                Encoding.UTF8.GetBytes(tokenService.HashOtpCode(code)),
+                Encoding.UTF8.GetBytes(storedCode.CodeHash)))
         {
             await codes.IncrementAttemptsAsync(storedCode.Id);
             await unitOfWork.SaveChangesAsync();
             return ChangePasswordResult.CodeInvalid();
         }
+
+        await using var transaction = await unitOfWork.BeginTransactionAsync();
 
         var result = await users.ChangePasswordAsync(userId, currentPassword, newPassword);
         if (result.Succeeded)
@@ -87,6 +93,7 @@ public class StudentProfileService(
             await codes.MarkUsedAsync(storedCode.Id);
             await refreshTokens.RevokeAllForUserAsync(userId);
             await unitOfWork.SaveChangesAsync();
+            await transaction.CommitAsync();
             return ChangePasswordResult.Success();
         }
 

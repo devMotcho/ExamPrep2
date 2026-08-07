@@ -26,7 +26,7 @@ Version 2 (this repository) was born out of a desire to do it right. I decided t
 
 I built this platform utilizing a modern, scalable tech stack, heavily tailored around my personal development workflow:
 
-* Development Environment: Ghostty, Neovim (fully customized for C# / .NET development)
+* Development Environment: Ghostty, Tmux and Neovim (fully customized for C# / .NET development)
 * API Testing & Documentation: Postman & Swagger (OpenAPI)
 * Backend Framework: .NET 9 (C#) using ASP.NET Core Web API
 * Database & ORM: PostgreSQL & Entity Framework Core (EF Core)

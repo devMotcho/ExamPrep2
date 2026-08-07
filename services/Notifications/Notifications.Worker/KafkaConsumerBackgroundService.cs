@@ -1,29 +1,32 @@
 using System.Text.Json;
 using Confluent.Kafka;
-using Notifications.Application.Interfaces;
-using Notifications.Domain.Enums;
-using Notifications.Domain.Models;
+using Notifications.Worker.Handlers;
 using ExamPrep.Shared.Constants;
 
 namespace Notifications.Worker;
 
+/// <summary>
+/// Kafka consumer loop responsible only for:
+///   1. Connecting to Kafka and subscribing to topics declared by registered handlers
+///   2. Unwrapping the Debezium envelope
+///   3. Routing the clean payload to the correct <see cref="IKafkaEventHandler"/>
+/// 
+/// All event-specific business logic lives in individual handler classes.
+/// </summary>
 public class KafkaConsumerBackgroundService : BackgroundService
 {
     private readonly ILogger<KafkaConsumerBackgroundService> _logger;
     private readonly IConfiguration _config;
-    private readonly INotificationDispatcher _dispatcher;
-    private readonly ITemplateService _templateService;
+    private readonly IReadOnlyDictionary<string, IKafkaEventHandler> _handlers;
 
     public KafkaConsumerBackgroundService(
         ILogger<KafkaConsumerBackgroundService> logger,
         IConfiguration config,
-        INotificationDispatcher dispatcher,
-        ITemplateService templateService)
+        IEnumerable<IKafkaEventHandler> handlers)
     {
         _logger = logger;
         _config = config;
-        _dispatcher = dispatcher;
-        _templateService = templateService;
+        _handlers = handlers.ToDictionary(h => h.Topic);
     }
 
     protected override async Task ExecuteAsync(CancellationToken stoppingToken)
@@ -36,12 +39,8 @@ public class KafkaConsumerBackgroundService : BackgroundService
         };
 
         using var consumer = new ConsumerBuilder<Ignore, string>(config).Build();
-        
-        var topics = new[] { 
-            KafkaTopics.PartnerTransaction, 
-            KafkaTopics.EmailVerificationCodeRequested, 
-            KafkaTopics.PasswordChangeCodeRequested 
-        };
+
+        var topics = _handlers.Keys.ToArray();
         consumer.Subscribe(topics);
 
         _logger.LogInformation("Kafka consumer started listening to topics: {Topics}", string.Join(", ", topics));
@@ -55,9 +54,7 @@ public class KafkaConsumerBackgroundService : BackgroundService
                     var consumeResult = consumer.Consume(stoppingToken);
                     if (consumeResult?.Message == null) continue;
 
-                    var json = consumeResult.Message.Value;
-                    var topic = consumeResult.Topic;
-                    await ProcessMessageAsync(topic, json, stoppingToken);
+                    await ProcessMessageAsync(consumeResult.Topic, consumeResult.Message.Value, stoppingToken);
                 }
                 catch (ConsumeException e)
                 {
@@ -80,105 +77,60 @@ public class KafkaConsumerBackgroundService : BackgroundService
     {
         try
         {
-            // Parse Debezium payload structure
-            // If the Outbox Event Router converts the record to a primitive JSON string (due to schema.enable=false and string column)
-            // The json might just be the direct payload string (with escaped quotes). Let's unescape if necessary.
-            
-            JsonElement root;
-            try 
+            var payload = UnwrapDebeziumPayload(json);
+
+            if (_handlers.TryGetValue(topic, out var handler))
             {
-                var doc = JsonDocument.Parse(json);
-                // If it's a Debezium wrapped object with "payload" -> "after" -> "payload"
-                if (doc.RootElement.ValueKind == JsonValueKind.Object && 
-                    doc.RootElement.TryGetProperty("payload", out var payloadElement) &&
-                    payloadElement.ValueKind == JsonValueKind.Object &&
-                    payloadElement.TryGetProperty("after", out var afterElement) &&
-                    afterElement.ValueKind == JsonValueKind.Object &&
-                    afterElement.TryGetProperty("Payload", out var eventPayloadElement))
-                {
-                    root = JsonDocument.Parse(eventPayloadElement.GetString()!).RootElement;
-                }
-                else if (doc.RootElement.ValueKind == JsonValueKind.String)
-                {
-                    // It's a primitive string (Event Router dumped the string directly)
-                    root = JsonDocument.Parse(doc.RootElement.GetString()!).RootElement;
-                }
-                else
-                {
-                    // It's already the raw parsed object
-                    root = doc.RootElement;
-                }
+                await handler.HandleAsync(payload, cancellationToken);
             }
-            catch (JsonException)
+            else
             {
-                // Fallback if the json is exactly the raw string payload but not wrapped in JSON quotes
-                root = JsonDocument.Parse(json).RootElement;
-            }
-
-            if (topic == KafkaTopics.PartnerTransaction)
-            {
-                if (root.TryGetProperty("PartnerEmail", out var emailProp))
-                {
-                    var recipient = emailProp.GetString();
-                    var amount = root.GetProperty("Amount").GetDecimal();
-                    var type = root.GetProperty("TransactionType").GetString();
-                    var desc = root.GetProperty("Description").GetString();
-                    var balance = root.GetProperty("NewBalance").GetDecimal();
-
-                    var subject = $"{AppConstants.AppName} Partner Balance Update: {type}";
-                    var body = await _templateService.RenderAsync("PartnerTransaction", new {
-                        type = type,
-                        amount = amount.ToString("0.00"),
-                        desc = desc,
-                        balance = balance.ToString("0.00"),
-                        year = DateTime.UtcNow.Year,
-                        appName = AppConstants.AppName
-                    });
-
-                    var notification = new NotificationMessage(recipient!, subject, body, NotificationType.Email);
-                    await _dispatcher.DispatchAsync(notification, cancellationToken);
-                }
-            }
-            else if (topic == KafkaTopics.EmailVerificationCodeRequested)
-            {
-                if (root.TryGetProperty("Email", out var emailProp) && root.TryGetProperty("Code", out var codeProp))
-                {
-                    var recipient = emailProp.GetString();
-                    var code = codeProp.GetString();
-
-                    var subject = $"Your {AppConstants.AppName} Verification Code";
-                    var body = await _templateService.RenderAsync("EmailVerification", new { 
-                        code = code, 
-                        year = DateTime.UtcNow.Year,
-                        appName = AppConstants.AppName
-                    });
-
-                    var notification = new NotificationMessage(recipient!, subject, body, NotificationType.Email);
-                    await _dispatcher.DispatchAsync(notification, cancellationToken);
-                }
-            }
-            else if (topic == KafkaTopics.PasswordChangeCodeRequested)
-            {
-                if (root.TryGetProperty("Email", out var emailProp) && root.TryGetProperty("Code", out var codeProp))
-                {
-                    var recipient = emailProp.GetString();
-                    var code = codeProp.GetString();
-
-                    var subject = $"Your {AppConstants.AppName} Password Change Code";
-                    var body = await _templateService.RenderAsync("PasswordChange", new { 
-                        code = code, 
-                        year = DateTime.UtcNow.Year,
-                        appName = AppConstants.AppName
-                    });
-
-                    var notification = new NotificationMessage(recipient!, subject, body, NotificationType.Email);
-                    await _dispatcher.DispatchAsync(notification, cancellationToken);
-                }
+                _logger.LogWarning("No handler registered for topic {Topic}", topic);
             }
         }
         catch (Exception ex)
         {
             _logger.LogError(ex, "Error processing Kafka message on topic {Topic}", topic);
+        }
+    }
+
+    /// <summary>
+    /// Strips the Debezium envelope (if present) and returns the inner event payload.
+    /// Handles three formats:
+    ///   1. Debezium wrapped: { "payload": { "after": { "Payload": "..." } } }
+    ///   2. Primitive string wrapper: "\"{ ... }\""
+    ///   3. Raw JSON object (no wrapping)
+    /// </summary>
+    private static JsonElement UnwrapDebeziumPayload(string json)
+    {
+        try
+        {
+            var doc = JsonDocument.Parse(json);
+
+            // Format 1: Debezium CDC with Outbox Event Router
+            if (doc.RootElement.ValueKind == JsonValueKind.Object &&
+                doc.RootElement.TryGetProperty("payload", out var payloadElement) &&
+                payloadElement.ValueKind == JsonValueKind.Object &&
+                payloadElement.TryGetProperty("after", out var afterElement) &&
+                afterElement.ValueKind == JsonValueKind.Object &&
+                afterElement.TryGetProperty("Payload", out var eventPayloadElement))
+            {
+                return JsonDocument.Parse(eventPayloadElement.GetString()!).RootElement;
+            }
+
+            // Format 2: Primitive string (Event Router dumped the string directly)
+            if (doc.RootElement.ValueKind == JsonValueKind.String)
+            {
+                return JsonDocument.Parse(doc.RootElement.GetString()!).RootElement;
+            }
+
+            // Format 3: Already the raw parsed object
+            return doc.RootElement;
+        }
+        catch (JsonException)
+        {
+            // Fallback: raw string payload not wrapped in JSON quotes
+            return JsonDocument.Parse(json).RootElement;
         }
     }
 }

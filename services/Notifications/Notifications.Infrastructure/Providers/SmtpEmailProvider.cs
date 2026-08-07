@@ -1,6 +1,3 @@
-using System;
-using System.Threading;
-using System.Threading.Tasks;
 using MailKit.Net.Smtp;
 using MailKit.Security;
 using Microsoft.Extensions.Configuration;
@@ -40,7 +37,7 @@ public class SmtpEmailProvider : INotificationProvider
             emailMessage.Body = bodyBuilder.ToMessageBody();
 
             using var client = new SmtpClient();
-            
+
             // For Google SMTP
             var host = _config[ConfigKeys.Email.SmtpHost] ?? "smtp.gmail.com";
             var port = int.Parse(_config[ConfigKeys.Email.SmtpPort] ?? "587");
